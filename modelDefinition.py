@@ -24,12 +24,12 @@ def loadData(heights, location, roughness, yMax, plot=False, home='../../PFTestM
             
             prefix = str(str(x)+'_').replace('.','p')
                 
-            if h == 0.08 and (r == 32 or r == 42):
-                u = 18
-            elif h == 0.12 and r == 52:
-                u = 12
-            else:
-                u = 15
+            #if h == 0.08 and (r == 32 or r == 42):
+                #u = 18
+            #elif h == 0.12 and r == 52:
+                #u = 12
+            #else:
+                #u = 15
             
             temp = pd.DataFrame()
             #print(r)
@@ -92,14 +92,6 @@ class gaussianProcess:
         self.meanVal = self.trainData.mean()
         self.stdVal  = self.trainData.std()
         
-        #self.meanVal = pd.Series(data={'x':0,'y':0,'h':0})
-        #self.stdVal = pd.Series(data={'x':1,'y':1,'h':1})
-        
-        #print(self.meanVal['x'])
-        #print(self.stdVal)
-        #print(np.unique(self.trainData['x'].to_numpy()))
-        #input()
-        
         return
     
     def predict(self, model, contourData, features):
@@ -122,10 +114,9 @@ class gaussianProcess:
         
         np.random.seed(seed)
         
-        alpha  = 10**np.random.uniform(-6.0,-1.0)
+        alpha  = 10**np.random.uniform(-6.0,-2.0)
         
         nKernels = np.random.randint(1,5)
-        nKernels = 4
         
         expression=''
         for i in range(nKernels):
