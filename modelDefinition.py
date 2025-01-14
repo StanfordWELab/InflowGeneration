@@ -10,9 +10,9 @@ from scipy.interpolate import interp1d
 from modelDefinition import *
 import warnings
 
-def loadData(heights, location, roughness, yMax, plot=False, home='../../PFTestMatrix'):
+def loadData(heights, location, roughness, yMax, plot=False, home='../../PFTestMatrix', yInterp=False):
     ymin = 0.005
-    
+    u=15
     data = pd.DataFrame()
     
     for i in range(len(heights)):
@@ -31,18 +31,19 @@ def loadData(heights, location, roughness, yMax, plot=False, home='../../PFTestM
             #else:
                 #u = 15
             
-            temp = pd.DataFrame()
+            temp         = pd.DataFrame()
+            interpolated = pd.DataFrame()
             #print(r)
             
-            avg_u = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'avg_u.00100000.collapse_width.dat',skiprows = 3)
+            avg_u = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'avg_u.00075000.collapse_width.dat',skiprows = 3)
 
-            Umag = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'mag_u.00100000.collapse_width.dat',skiprows = 3)
+            Umag = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'mag_u.00075000.collapse_width.dat',skiprows = 3)
 
-            rms_u = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'rms_u.00100000.collapse_width.dat',skiprows = 3)
-            rms_v = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'rms_v.00100000.collapse_width.dat',skiprows = 3)
-            rms_w = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'rms_w.00100000.collapse_width.dat',skiprows = 3)
+            rms_u = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'rms_u.00075000.collapse_width.dat',skiprows = 3)
+            rms_v = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'rms_v.00075000.collapse_width.dat',skiprows = 3)
+            rms_w = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'rms_w.00075000.collapse_width.dat',skiprows = 3)
 
-            uv = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'uv.00100000.collapse_width.dat',skiprows = 3)
+            uv = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'uv.00075000.collapse_width.dat',skiprows = 3)
             
             temp['y'] = avg_u[(avg_u[:,3]>=ymin) & (avg_u[:,3]<=yMax),3]/yMax
             #temp['x'] = avg_u[(avg_u[:,3]>ymin) & (avg_u[:,3]<yMax),2]-29.5
@@ -53,7 +54,11 @@ def loadData(heights, location, roughness, yMax, plot=False, home='../../PFTestM
             temp['Iu'] = rms_u[(rms_u[:,3]>=ymin) & (rms_u[:,3]<=yMax),5]/Umag[(Umag[:,3]>=ymin) & (Umag[:,3]<=yMax),5]
             temp['Iv'] = rms_v[(rms_v[:,3]>=ymin) & (rms_v[:,3]<=yMax),5]/Umag[(Umag[:,3]>=ymin) & (Umag[:,3]<=yMax),5]
             temp['Iw'] = rms_w[(rms_w[:,3]>=ymin) & (rms_w[:,3]<=yMax),5]/Umag[(Umag[:,3]>=ymin) & (Umag[:,3]<=yMax),5]
-            temp['uv'] = uv[(uv[:,3]>=ymin) & (uv[:,3]<=yMax),5]/(Umag[(Umag[:,3]>=ymin) & (Umag[:,3]<=yMax),5]**2)
+            temp['Iuv'] = abs(uv[(uv[:,3]>=ymin) & (uv[:,3]<=yMax),5]/(Umag[(Umag[:,3]>=ymin) & (Umag[:,3]<=yMax),5]**2))
+            temp['uu'] = rms_u[(rms_u[:,3]>=ymin) & (rms_u[:,3]<=yMax),5]
+            temp['vv'] = rms_v[(rms_v[:,3]>=ymin) & (rms_v[:,3]<=yMax),5]
+            temp['ww'] = rms_w[(rms_w[:,3]>=ymin) & (rms_w[:,3]<=yMax),5]
+            temp['uv'] = abs(uv[(uv[:,3]>=ymin) & (uv[:,3]<=yMax),5])
             temp['h'] = h
             temp['r'] = r
             
@@ -63,38 +68,79 @@ def loadData(heights, location, roughness, yMax, plot=False, home='../../PFTestM
             
             lastRow={'x':x, 'y':yMax/yMax, 'u':U_yMax_interp/U_yMax_interp, 'umin':(interp1d(avg_u[:,3], avg_u[:,6])(yMax)).item()/U_yMax_interp, 'uMax':(interp1d(avg_u[:,3], avg_u[:,7])(yMax)).item()/U_yMax_interp
                     ,'Iu':(interp1d(rms_u[:,3], rms_u[:,5]/Umag[:,5]))(yMax).item(), 'Iv':(interp1d(rms_v[:,3], rms_v[:,5]/Umag[:,5]))(yMax).item()
-                    ,'Iw':(interp1d(rms_w[:,3], rms_w[:,5]/Umag[:,5]))(yMax).item(), 'uv':(interp1d(uv[:,3], uv[:,5]/(Umag[:,5]**2)))(yMax).item(), 'h':h,'r':r}
+                    ,'Iw':(interp1d(rms_w[:,3], rms_w[:,5]/Umag[:,5]))(yMax).item(), 'Iuv':abs((interp1d(uv[:,3], uv[:,5]/(Umag[:,5]**2)))(yMax).item())
+                    ,'uu':(interp1d(rms_u[:,3], rms_u[:,5]/U_yMax_interp/U_yMax_interp))(yMax).item(), 'vv':(interp1d(rms_v[:,3], rms_v[:,5]/U_yMax_interp/U_yMax_interp))(yMax).item()
+                    ,'ww':(interp1d(rms_w[:,3], rms_w[:,5]/U_yMax_interp/U_yMax_interp))(yMax).item(),'uv':abs((interp1d(uv[:,3], uv[:,5]/(U_yMax_interp**2)))(yMax).item()),'h':h,'r':r}
             temp['u'] = temp['u']/U_yMax_interp
+            temp['uu'] = temp['uu']/U_yMax_interp/U_yMax_interp
+            temp['uv'] = temp['uv']/(U_yMax_interp**2)
+            temp['vv'] = temp['vv']/U_yMax_interp/U_yMax_interp
+            temp['ww'] = temp['ww']/U_yMax_interp/U_yMax_interp
             temp['umin'] = temp['umin']/U_yMax_interp
             temp['uMax'] = temp['uMax']/U_yMax_interp
             
             temp = pd.concat([pd.DataFrame([lastRow]),temp], ignore_index=True)
             
-            if data.empty:
-                data = temp
+            if isinstance(yInterp, (np.ndarray, np.generic)):
+            
+                cols = temp.columns.tolist()
+                
+                cols.remove('x')
+                interpolated['x'] = x*np.ones(yInterp.shape)
+                
+                cols.remove('y')
+                interpolated['y'] = 1.0*yInterp
+                
+                cols.remove('h')
+                interpolated['h'] = h
+                
+                cols.remove('r')
+                interpolated['r'] = r
+                
+                for col in cols:
+                    
+                    f = interp1d(temp['y'], temp[col],kind='cubic')
+
+                    interpolated[col] = 1.0*f(yInterp)
+                
+                if data.empty:
+                    data = interpolated
+                else:
+                    data = data.merge(interpolated, how='outer')
+                
             else:
-                data = data.merge(temp, how='outer')
+                
+                if data.empty:
+                    data = temp
+                else:
+                    data = data.merge(temp, how='outer')
 
     return data
 
 class gaussianProcess:
     
-    normalization = 'normal'
+    #normalization = 'normal'
+    normalization = 'log'
     
-    def __init__(self, trainPoints, devPoints, testPoints, yMax, homeDirectory):
+    def __init__(self, trainPoints, devPoints, testPoints, yMax, homeDirectory, yInterp=False):
         
         self.yMax = yMax
         
-        self.trainData = loadData(trainPoints['h'], trainPoints['x'], trainPoints['r'], self.yMax , False, homeDirectory)
-        self.devData  = loadData(devPoints['h'], devPoints['x'], devPoints['r'], self.yMax , False, homeDirectory)
-        self.testData = loadData(testPoints['h'], testPoints['x'], testPoints['r'], self.yMax , False, homeDirectory)
+        self.trainData = loadData(trainPoints['h'], trainPoints['x'], trainPoints['r'], self.yMax , False, homeDirectory, yInterp)
+        self.devData  = loadData(devPoints['h'], devPoints['x'], devPoints['r'], self.yMax , False, homeDirectory, yInterp)
+        self.testData = loadData(testPoints['h'], testPoints['x'], testPoints['r'], self.yMax , False, homeDirectory, yInterp)
+        
+        #print(self.devData)
+        #print(self.testData)
+        #input()
         
         self.meanVal = self.trainData.mean()
         self.stdVal  = self.trainData.std()
         
         return
     
-    def predict(self, model, contourData, features):
+    def predict(self, model, cDF, features):
+        contourData = cDF.copy(deep=True)
         
         gpr = joblib.load(model)
         
@@ -113,8 +159,9 @@ class gaussianProcess:
         kernels = ['RBF()', 'Matern()', 'RationalQuadratic()', 'DotProduct()', 'WhiteKernel()']
         
         np.random.seed(seed)
+        random.seed(seed)
         
-        alpha  = 10**np.random.uniform(-6.0,-2.0)
+        alpha  = 10**np.random.uniform(-7.0,-2.0)
         
         nKernels = np.random.randint(1,5)
         
@@ -129,7 +176,8 @@ class gaussianProcess:
         
         from sklearn.gaussian_process.kernels import RBF, Matern, RationalQuadratic, DotProduct, WhiteKernel
         
-        gpr = GaussianProcessRegressor(kernel=eval(expression),alpha = alpha, random_state=1)
+        gpr = GaussianProcessRegressor(kernel=eval(expression),alpha = alpha, random_state=seed, normalize_y=True)
+        #gpr = GaussianProcessRegressor(kernel=eval(expression),alpha = alpha, random_state=1)
         
         if self.normalization == 'log':
             gpr.fit(np.log(self.trainData[features].to_numpy()), self.trainData[[QoI]].to_numpy())
@@ -138,18 +186,29 @@ class gaussianProcess:
         
         elif self.normalization == 'normal':
             gpr.fit(((self.trainData[features]-self.meanVal[features])/self.stdVal[features]).to_numpy(), self.trainData[[QoI]].to_numpy())
-            y_dev, _  = gpr.predict(((self.devData[features]-self.meanVal[features])/self.stdVal[features]), return_std=True)
-            y_test, _ = gpr.predict(((self.testData[features]-self.meanVal[features])/self.stdVal[features]), return_std=True)
+            y_dev, _  = gpr.predict(((self.devData[features]-self.meanVal[features])/self.stdVal[features]).to_numpy(), return_std=True)
+            y_test, _ = gpr.predict(((self.testData[features]-self.meanVal[features])/self.stdVal[features]).to_numpy(), return_std=True)
             
         #print(y_dev)
         #print(self.devData[QoI].to_numpy())
         ##input()
+        
+        #print(y_dev)
+        #print(self.devData[QoI].to_numpy())
+        #plt.figure()
+        #plt.plot(y_dev)
+        #plt.plot(self.devData[QoI].to_numpy())
+        #plt.show()
         
         dev_RMSE_relative  = np.linalg.norm((y_dev-self.devData[QoI].to_numpy())/self.devData[QoI].to_numpy())
         dev_RMSE  = np.linalg.norm(y_dev-self.devData[QoI].to_numpy())
         
         test_RMSE_relative = np.linalg.norm((y_test-self.testData[QoI].to_numpy())/self.testData[QoI].to_numpy())
         test_RMSE = np.linalg.norm(y_test-self.testData[QoI].to_numpy())
+        
+        #print(QoI + ' Relative RMSE: '+ str(dev_RMSE_relative))
+        #print(QoI + ' Absolute RMSE:' + str(dev_RMSE))
+        #input()
         
         with open('../GPRModels/'+directory+'_'+QoI+'.dat','a+') as out:
             out.write('\n==============================================')
@@ -158,13 +217,13 @@ class gaussianProcess:
             out.write('\n# of kernels       : ' +str(nKernels))
             out.write('\nKernels            : ' +expression)
             out.write('\nDev  RMSE Relative : ' +str(dev_RMSE_relative))
-            #out.write('\nTest RMSE Relative : ' +str(test_RMSE_relative))
+            out.write('\nTest RMSE Relative : ' +str(test_RMSE_relative))
             out.write('\nDev  RMSE          : ' +str(dev_RMSE))
-            #out.write('\nTest RMSE          : ' +str(test_RMSE))
+            out.write('\nTest RMSE          : ' +str(test_RMSE))
             out.write('\nNormalization      : ' +str(self.normalization))
-            out.write('\nTrain points       : ' +'x='+str(np.unique(self.trainData['x']))+'; h='+str(np.unique(self.trainData['h'])))
+            out.write('\nTrain points       : ' +'x='+str(np.unique(self.trainData['x']))+'; h='+str(np.unique(self.trainData['h']))+'; r='+str(np.unique(self.trainData['r'])))
             #out.write('\nTest points        : ' +'x='+str(np.unique(self.devData['x']))+'; h='+str(np.unique(self.devData['h'])))
-            out.write('\nDev points         : ' +'x='+str(np.unique(self.testData['x']))+'; h='+str(np.unique(self.testData['h'])))
+            out.write('\nDev points         : ' +'x='+str(np.unique(self.testData['x']))+'; h='+str(np.unique(self.testData['h']))+'; r='+str(np.unique(self.devData['r'])))
             out.write('\n==============================================')
             
             

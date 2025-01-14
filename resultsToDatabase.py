@@ -10,13 +10,18 @@ import matplotlib.pyplot as plt
 
 #################################################################
 
-testID = 'hf'
-xList = [0.3,0.6]
+testID = 'long'
+xList = [0.3,0.6,0.9,1.2,1.5,2.1,2.4,2.7,3.0,3.3]
+xList = [3.0,4.0,5.0,6.0,7.0,9.0,11.0,13.0]
+sort_entry = 'Dev RMSE'
+#xList = [2.4]
 
 #################################################################
 
 cont = 1
-quantities = ['u','Iu','Iv','Iw']
+#quantities = ['u','Iu','Iv','Iw']
+quantities = ['u','uu','vv','ww','uv']
+#quantities = ['uv']
 
 #if plot==True:
     #my_dpi = 100
@@ -57,9 +62,9 @@ for x in xList:
                     idx = line.index(':')
                     kernel.append(re.findall(r'[\+\s](.*?)(?=\()', line[line.index(':')+1:]))
                     nKernels.append(line.count(')'))
-                if 'Dev  RMSE Relative' in line:
+                if 'Dev  RMSE Relative :' in line:
                     RMSE_relative.append([float(x) for x in re.findall('[0-9].+', line)][0])
-                if 'Dev  RMSE' in line:
+                if 'Dev  RMSE          :' in line:
                     RMSE.append([float(x) for x in re.findall('[0-9].+', line)][0])
                 if 'Train points' in line:
                     idx = line.index(':')
@@ -71,7 +76,7 @@ for x in xList:
                 df = pd.DataFrame(list(zip(seed, alpha, nKernels, kernel, RMSE_relative, RMSE, trainPoints, devPoints)), 
                                 columns = ['Seed', 'Alpha', '# of Kernels', 'Kernels', 'Dev RMSE Relative', 'Dev RMSE', 'Train points','Dev points'])
                 
-        df = df.sort_values(by = 'Dev RMSE Relative', ascending = True)
+        df = df.sort_values(by = sort_entry, ascending = True)
 
         print("=================================================================================================================")
         print('Considering file ' + fName)
@@ -82,6 +87,7 @@ for x in xList:
         
         seed = df['Seed'].iloc[0]
         os.system('cp ../GPRModels/' + fName + '/'+str(seed)+'.pkl ' +' ../GPRModels/'+fName+'.pkl')
+        #input()
         
         #if plot == True:
             #plt.subplot(3,4,cont)
