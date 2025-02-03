@@ -55,22 +55,24 @@ colors  = {'0.03':['tab:cyan',(0,(3,5,3,5))]
 #devPairs = np.array([[0.06,37],[0.14,47]])
 #testPairs = np.array([[0.06,47],[0.14,57]])
 
-nCpu = 12
+nCpu = 128
 
 
 # stresses_normalized
-hTrain = [0.04]
+hTrain = [0.08,0.12,0.16]
 rTrain = [52,62,72,82,92]
-testID = 'long'
+testID = 'intensities'
 
-devPairs = np.array([[0.04,52],[0.04,92]])
-testPairs = np.array([[0.04,62],[0.04,82]])
+# devPairs = np.array([[0.06,57],[0.06,87],[0.14,67],[0.14,77]])
+# testPairs = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
+devPairs = np.array([[0.14,67],[0.14,77]])
+testPairs = np.array([[0.14,57],[0.14,87]])
 
-QoIs = ['u','uu','vv','ww','uv']
-#QoIs = ['Iu','Iv','Iw','Iuv']
+#QoIs = ['u','uu','vv','ww']
+QoIs = ['Iu','Iv','Iw']
 #QoIs = ['Iuv']
 
-PFDatabase = '../../TIGTestMatrixLong'
+PFDatabase = '../../TIGTestMatrixLong/'
 
 setToPlot = 'Test'
 
@@ -117,7 +119,7 @@ if mode == 'Gridsearch':
                 out.write('\n'*10+'Gridsearch performed on ' + str(now.strftime("%d %m %Y, %H:%M:%S"))+ '\n'*10)
                 
             _ = joblib.Parallel(n_jobs=nCpu)(joblib.delayed(gp.gridsearch)(seed, features, directory, QoI)
-                                    for seed in range(0,12))
+                                    for seed in range(0,256))
 
 #############################################################
 

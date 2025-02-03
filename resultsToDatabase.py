@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 #################################################################
 
 testID = 'long'
-xList = [0.3,0.6,0.9,1.2,1.5,2.1,2.4,2.7,3.0,3.3]
-xList = [3.0,4.0,5.0,6.0,7.0,9.0,11.0,13.0]
+#xList = [0.3,0.6,0.9,1.2,1.5,2.1,2.4,2.7,3.0,3.3]
+xList = [0.3,0.6,0.9,1.2,1.5,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]
 sort_entry = 'Dev RMSE'
 #xList = [2.4]
 
@@ -20,7 +20,7 @@ sort_entry = 'Dev RMSE'
 
 cont = 1
 #quantities = ['u','Iu','Iv','Iw']
-quantities = ['u','uu','vv','ww','uv']
+quantities = ['u','uu','vv','ww']
 #quantities = ['uv']
 
 #if plot==True:

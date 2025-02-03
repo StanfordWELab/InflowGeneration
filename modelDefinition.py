@@ -10,7 +10,7 @@ from scipy.interpolate import interp1d
 from modelDefinition import *
 import warnings
 
-def loadData(heights, location, roughness, yMax, plot=False, home='../../PFTestMatrix', yInterp=False):
+def loadData(heights, location, roughness, yMax, plot=False, home='../../TIGTestMatrixLong/', yInterp=False):
     ymin = 0.005
     u=15
     data = pd.DataFrame()
@@ -55,9 +55,9 @@ def loadData(heights, location, roughness, yMax, plot=False, home='../../PFTestM
             temp['Iv'] = rms_v[(rms_v[:,3]>=ymin) & (rms_v[:,3]<=yMax),5]/Umag[(Umag[:,3]>=ymin) & (Umag[:,3]<=yMax),5]
             temp['Iw'] = rms_w[(rms_w[:,3]>=ymin) & (rms_w[:,3]<=yMax),5]/Umag[(Umag[:,3]>=ymin) & (Umag[:,3]<=yMax),5]
             temp['Iuv'] = abs(uv[(uv[:,3]>=ymin) & (uv[:,3]<=yMax),5]/(Umag[(Umag[:,3]>=ymin) & (Umag[:,3]<=yMax),5]**2))
-            temp['uu'] = rms_u[(rms_u[:,3]>=ymin) & (rms_u[:,3]<=yMax),5]
-            temp['vv'] = rms_v[(rms_v[:,3]>=ymin) & (rms_v[:,3]<=yMax),5]
-            temp['ww'] = rms_w[(rms_w[:,3]>=ymin) & (rms_w[:,3]<=yMax),5]
+            temp['uu'] = rms_u[(rms_u[:,3]>=ymin) & (rms_u[:,3]<=yMax),5]**2
+            temp['vv'] = rms_v[(rms_v[:,3]>=ymin) & (rms_v[:,3]<=yMax),5]**2
+            temp['ww'] = rms_w[(rms_w[:,3]>=ymin) & (rms_w[:,3]<=yMax),5]**2
             temp['uv'] = abs(uv[(uv[:,3]>=ymin) & (uv[:,3]<=yMax),5])
             temp['h'] = h
             temp['r'] = r
@@ -65,19 +65,19 @@ def loadData(heights, location, roughness, yMax, plot=False, home='../../PFTestM
             U_yMax_interp = (interp1d(avg_u[:,3], avg_u[:,5])(yMax)).item()
             #U_yMax_temp = np.max(temp['u'])
             #U_normalize = max([U_yMax_interp,U_yMax_temp])
+            temp['u'] = temp['u']/U_yMax_interp
+            temp['uu'] = temp['uu']/(U_yMax_interp**2)
+            temp['uv'] = temp['uv']/(U_yMax_interp**2)
+            temp['vv'] = temp['vv']/(U_yMax_interp**2)
+            temp['ww'] = temp['ww']/(U_yMax_interp**2)
+            temp['umin'] = temp['umin']/U_yMax_interp
+            temp['uMax'] = temp['uMax']/U_yMax_interp
             
             lastRow={'x':x, 'y':yMax/yMax, 'u':U_yMax_interp/U_yMax_interp, 'umin':(interp1d(avg_u[:,3], avg_u[:,6])(yMax)).item()/U_yMax_interp, 'uMax':(interp1d(avg_u[:,3], avg_u[:,7])(yMax)).item()/U_yMax_interp
                     ,'Iu':(interp1d(rms_u[:,3], rms_u[:,5]/Umag[:,5]))(yMax).item(), 'Iv':(interp1d(rms_v[:,3], rms_v[:,5]/Umag[:,5]))(yMax).item()
-                    ,'Iw':(interp1d(rms_w[:,3], rms_w[:,5]/Umag[:,5]))(yMax).item(), 'Iuv':abs((interp1d(uv[:,3], uv[:,5]/(Umag[:,5]**2)))(yMax).item())
-                    ,'uu':(interp1d(rms_u[:,3], rms_u[:,5]/U_yMax_interp/U_yMax_interp))(yMax).item(), 'vv':(interp1d(rms_v[:,3], rms_v[:,5]/U_yMax_interp/U_yMax_interp))(yMax).item()
-                    ,'ww':(interp1d(rms_w[:,3], rms_w[:,5]/U_yMax_interp/U_yMax_interp))(yMax).item(),'uv':abs((interp1d(uv[:,3], uv[:,5]/(U_yMax_interp**2)))(yMax).item()),'h':h,'r':r}
-            temp['u'] = temp['u']/U_yMax_interp
-            temp['uu'] = temp['uu']/U_yMax_interp/U_yMax_interp
-            temp['uv'] = temp['uv']/(U_yMax_interp**2)
-            temp['vv'] = temp['vv']/U_yMax_interp/U_yMax_interp
-            temp['ww'] = temp['ww']/U_yMax_interp/U_yMax_interp
-            temp['umin'] = temp['umin']/U_yMax_interp
-            temp['uMax'] = temp['uMax']/U_yMax_interp
+                    ,'Iw':(interp1d(rms_w[:,3], rms_w[:,5]/Umag[:,5]))(yMax).item(), 'Iuv':(interp1d(uv[:,3], np.sqrt(abs(uv[:,5])/(Umag[:,5]**2))))(yMax).item()
+                     ,'uu':((interp1d(rms_u[:,3], rms_u[:,5]**2))(yMax).item())/(U_yMax_interp**2), 'vv':((interp1d(rms_v[:,3], rms_v[:,5]**2))(yMax).item())/(U_yMax_interp**2)
+                    ,'ww':((interp1d(rms_w[:,3], rms_w[:,5]**2))(yMax).item())/(U_yMax_interp**2),'uv':abs((interp1d(uv[:,3], uv[:,5]))(yMax).item())/(U_yMax_interp**2),'h':h,'r':r}
             
             temp = pd.concat([pd.DataFrame([lastRow]),temp], ignore_index=True)
             
@@ -119,8 +119,9 @@ def loadData(heights, location, roughness, yMax, plot=False, home='../../PFTestM
 
 class gaussianProcess:
     
-    #normalization = 'normal'
-    normalization = 'log'
+    normalization = 'normal'
+    
+    model_loaded = False
     
     def __init__(self, trainPoints, devPoints, testPoints, yMax, homeDirectory, yInterp=False):
         
@@ -137,19 +138,29 @@ class gaussianProcess:
         self.meanVal = self.trainData.mean()
         self.stdVal  = self.trainData.std()
         
+        
         return
     
+    def loadModel(self,model):
+        
+        self.model_loaded = True
+        self.predictive_model = joblib.load(model)
+        print('Model loaded preemptively')
+    
     def predict(self, model, cDF, features):
+        
         contourData = cDF.copy(deep=True)
         
-        gpr = joblib.load(model)
+        if self.model_loaded == False:
+            self.predictive_model = joblib.load(model)
+            print('Model loaded at prediction time')
         
         if self.normalization == 'log':
             warnings.filterwarnings("ignore")
-            contourData['y_model'], _ = gpr.predict(np.log(contourData[features]), return_std=True)
+            contourData['y_model'], contourData['y_std'] = self.predictive_model.predict(np.log(contourData[features]), return_std=True)
         elif self.normalization == 'normal':
             warnings.filterwarnings("ignore")
-            contourData['y_model'], _ = gpr.predict((contourData[features]-self.meanVal[features])/self.stdVal[features], return_std=True)
+            contourData['y_model'], contourData['y_std'] = self.predictive_model.predict((contourData[features]-self.meanVal[features])/self.stdVal[features], return_std=True)
                 
         return contourData
         
