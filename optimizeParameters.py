@@ -55,6 +55,10 @@ def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs):
         for yVal in pyMooResults.F:
             
             plt.plot(xPlot,yVal,color=cm(norm(param[idx])))
+            
+            if idx%5 == 0:
+                plt.text(-0.01, yVal[0], str(idx), fontsize=10, ha='right', va='center')
+            
             idx+=1
         
         plt.ylabel('RMSE')
@@ -134,13 +138,13 @@ def evaluate_setup(hTr, hD, hT, yMax, parameters, refAbl, features, QoIs, home, 
 PFDatabase = './GPRDatabase'
 
 #fNames = ['testABL']
-fNames = ['TPU_ABL']
-#fNames = ['themisABL']
+#fNames = ['TPU_ABL']
+fNames = ['themisABL']
 #fNames = ['inflowProfile_U10_Cat4_1uu1vv1ww']
 #fNames = ['inflowProfile_U10_Cat1_1uu1vv1ww','inflowProfile_U10_Cat2_1uu1vv1ww','inflowProfile_U10_Cat3_1uu1vv1ww','inflowProfile_U10_Cat4_1uu1vv1ww']
 #fNames = ['inflowProfile_Cat2_1uu1vv1ww','inflowProfile_Cat3_1uu1vv1ww']
 #fNames = ['TPU_highrise_14_middle_higher']
-#fNames = ['TPU_highrise_14']
+#fNames = ['TPU_highrise_14_middle']
 
 
 ##### Define these variables for Optimize-Gridsearch ####
@@ -153,9 +157,9 @@ fNames = ['TPU_ABL']
 
 #### Define these variables for Optimize-NSGA ####
 xList = [0.3,0.6,0.9,1.2,1.5,1.8,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]
-variables = {r'$h$':[0.035,0.1649],r'$r$':[51.5,92.49],r'$\alpha$':[0.2,0.7],r'$x$':[-0.49,len(xList)-0.51]}
-population_size = 128
-n_generations = 50
+variables = {r'$h$':[0.035,0.1649],r'$r$':[51.5,92.49],r'$\alpha$':[0.3,0.5],r'$x$':[-0.49,len(xList)-0.51]}
+population_size = 96
+n_generations = 100
 
 
 ##### Define these variables for Plot-Gridsearch ####
@@ -166,7 +170,7 @@ n_generations = 50
 #nResults = 4
 
 #### Define these variables for Plot-Setup ####
-parameters = {'$h$':[0.06,0.16],r'$\alpha$':[0.24,0.48],r'$r$':[73,66],r'$x$':[1.2,3.3]}
+#parameters = {'$h$':[0.04,0.05,0.06],r'$\alpha$':[0.7,0.7,0.7],r'$r$':[92,76,52],r'$x$':[3.3,4.0,3.6]}
 
 #### metric is 'RMSE' or 'RMSE relative'
 metric = 'RMSE'
@@ -174,7 +178,7 @@ uncertainty = True
 testID = 'intensities'
 nCpu = 12
 
-targetQoIs = ['u','Iu']
+targetQoIs = ['u','Iu','Iv','Iw']
 
 ###############################################################################################
 
@@ -233,11 +237,11 @@ for fName in fNames:
         if rsc in header:
             ref_abl[rsc] = ref_abl[rsc]/(Uref**2)
             
-    QoIs = []
+    effectiveQoIs = []
 
     for QoI in everyQoI:
         if (QoI in header) and (QoI in targetQoIs):
-            QoIs.append(QoI)
+            effectiveQoIs.append(QoI)
 
     if mode == 'Optimize-Gridsearch':
 
@@ -254,7 +258,7 @@ for fName in fNames:
                         cont+=1
                         
         temp = joblib.Parallel(n_jobs=nCpu)(joblib.delayed(evaluate_setup)(trainPairs,devPairs,testPairs,
-            yMax,exploration_matrix[i,:],ref_abl,features,QoIs,PFDatabase,testID) for i in range(nTests))
+            yMax,exploration_matrix[i,:],ref_abl,features,effectiveQoIs,PFDatabase,testID) for i in range(nTests))
 
         df = pd.DataFrame()
         for dct in temp:
@@ -269,11 +273,11 @@ for fName in fNames:
 
         algorithm = NSGA2(pop_size=population_size)
 
-        problemUser = MyProblem(variables,trainPairs,devPairs,testPairs,yMax,xList,ref_abl,features,QoIs,PFDatabase,testID)
+        problemUser = MyProblem(variables,trainPairs,devPairs,testPairs,yMax,xList,ref_abl,features,effectiveQoIs,PFDatabase,testID)
         resUser = minimize(problemUser, algorithm, ('n_gen', n_generations), seed=1, verbose=False)
 
         # Save Pareto front (Objective values) to CSV
-        df_obj = pd.DataFrame(resUser.F, columns=[targetQoIs[i] for i in range(resUser.F.shape[1])])
+        df_obj = pd.DataFrame(resUser.F, columns=[effectiveQoIs[i] for i in range(resUser.F.shape[1])])
         df_obj.to_csv('TestCases/'+fName+"_pareto_front.csv", index=False)
 
         # Save Decision Variables to CSV
@@ -283,9 +287,9 @@ for fName in fNames:
     elif mode =='Plot-NSGA':
 
     # Create a pymoo-like result object
-        RMSEValues   = pd.read_csv('TestCases/'+fName+"_pareto_front.csv")
-        RMSEheader   = RMSEValues.columns.tolist()
-        decisionVars = pd.read_csv('TestCases/'+fName+"_decision_variables.csv")
+        RMSEValues    = pd.read_csv('TestCases/'+fName+"_pareto_front.csv")
+        effectiveQoIs = RMSEValues.columns.tolist()
+        decisionVars  = pd.read_csv('TestCases/'+fName+"_decision_variables.csv")
         
         NSGA_results = pd.concat([RMSEValues, decisionVars], axis=1).sort_values(by='u', ascending=False)
         NSGA_results['$x$'] = [xList[x] for x in NSGA_results['$x$'].round().astype(int).to_numpy()]
@@ -293,13 +297,13 @@ for fName in fNames:
         NSGA_results['$r$'] = NSGA_results['$r$'].round().astype(int).to_numpy()
         NSGA_results[r'$\alpha$'] = NSGA_results[r'$\alpha$'].round(2).astype(float).to_numpy()
         NSGA_results = NSGA_results.drop_duplicates(subset=varNames, keep='first').reset_index(drop=True)
-        print(NSGA_results)
+        print(NSGA_results.to_string())
         
         resUser = Result()
-        resUser.F = NSGA_results[RMSEheader].to_numpy()   # Pareto front
+        resUser.F = NSGA_results[effectiveQoIs].to_numpy()   # Pareto front
         resUser.X = NSGA_results[varNames].to_numpy()  # Decision variables
 
-        parallelCoordinatesPlot(resUser, xList, varNames, targetQoIs)
+        parallelCoordinatesPlot(resUser, xList, varNames, effectiveQoIs)
 
     elif mode == 'Plot-Gridsearch':
 
@@ -396,6 +400,102 @@ for fName in fNames:
         plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
 
         cont=1
+        
+        stop = 'n'
+        NSGA = ''
+        while not(NSGA in ['y','n']):
+            NSGA = input('Do you want to evaluate NSGA soutions?(y/n)\n')
+            
+        if NSGA == 'y':
+            
+            RMSEValues    = pd.read_csv('TestCases/'+fName+"_pareto_front.csv")
+            effectiveQoIs = RMSEValues.columns.tolist()
+            decisionVars  = pd.read_csv('TestCases/'+fName+"_decision_variables.csv")
+            
+            NSGA_results = pd.concat([RMSEValues, decisionVars], axis=1).sort_values(by='u', ascending=False)
+            NSGA_results['$x$'] = [xList[x] for x in NSGA_results['$x$'].round().astype(int).to_numpy()]
+            NSGA_results['$h$'] = ((NSGA_results['$h$']*100).round().astype(int)/100).to_numpy()
+            NSGA_results['$r$'] = NSGA_results['$r$'].round().astype(int).to_numpy()
+            NSGA_results[r'$\alpha$'] = NSGA_results[r'$\alpha$'].round(2).astype(float).to_numpy()
+            NSGA_results = NSGA_results.drop_duplicates(subset=varNames, keep='first').reset_index(drop=True)
+            print(NSGA_results.to_string())
+            
+            listSolutions = []
+            
+            while listSolutions == [] or not(isinstance(listSolutions, list)):
+                
+                listSolutions = input('List the pareto front dataset entries you want to visualize as numbers separated by spaces\n')
+                #listSolutions = eval(listSolutions)
+                try: 
+                    listSolutions = list(map(int, listSolutions.split()))
+                except:
+                    print('Wrong format! You did not provide either a list or a list of integers. Try again\n')
+            
+            print('\n=================================\n')
+            print('Visualizing entries ' +str(listSolutions))
+            print('\n=================================\n')
+            
+            parameters = NSGA_results.loc[listSolutions, [r'$h$', r'$r$', r'$\alpha$', r'$x$']].to_dict(orient='list')
+            
+        else:
+            hParams     = []
+            rParams     = []
+            alphaParams = []
+            xParams     = []
+            
+            escape = 't'
+            while not(escape == 'y'):
+                more = 'a'
+                
+                listSolutions = input('What h, r, alpha, and x values do you want to plot? Write them as numbers separated by spaces\n')
+                try:
+                    listSolutions = list(map(float, listSolutions.split()))
+                except:
+                    listSolutions = [None]
+                    
+                if len(listSolutions) == 4:
+                    h     = listSolutions[0]
+                    r     = listSolutions[1]
+                    alpha = listSolutions[2]
+                    x     = listSolutions[3]
+                    
+                    if (h<0.04) or (h>0.16) or (r<52) or (r>92) or (alpha<0.1) or alpha>1.0 or not(x in xList):
+                        print('Bad choice buddy...')
+                        if (h<0.04) or (h>0.16):
+                            print('h should be in [0.04,0.16]!')
+                        if (r<52) or (r>92):
+                            print('r should be in [52,92]!')
+                        if (alpha<0.1) or (alpha>1.0):
+                            print('alpha should be in ]0.1,1.0],!')
+                        if not(x in xList):
+                            print('x should be in '+str(xList)+'!')
+                        print('Try again\n')
+                    else:
+                        hParams.append(h)
+                        rParams.append(r)
+                        alphaParams.append(alpha)
+                        xParams.append(x)
+                        while not(more in ['y','n']):
+                            if more == 'a':
+                                print('So far you chose:')
+                                print('h     = '+str(hParams))
+                                print('r     = '+str(rParams))
+                                print('alpha = '+str(alphaParams))
+                                print('x     = '+str(xParams))
+                            more = input('Wanna add more test setups?(y/n)\n')
+                            
+                else:
+                    print('You need to specify four numerical parameters, try again!\n')
+                        
+                if more == 'n':
+                    escape = 'y'
+                    
+                        
+            parameters = {r'$h$':hParams,r'$r$':rParams,r'$\alpha$':alphaParams,r'$x$':xParams}
+            
+            print('\n=================================\n')
+            print('Visualizing setups ' +str(parameters))
+            print('\n=================================\n')
 
         for QoI in ['u','Iu','Iv','Iw']:
             

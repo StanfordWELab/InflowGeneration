@@ -160,15 +160,6 @@ elif mode == 'Plot':
                 target.extend(withheldData[QoI].to_numpy()) 
                 prediction.extend(y_mean_dev['y_model'].to_numpy())
                 
-                #print(withheldData)
-                #print(y_mean_dev)
-                #print(h,r)
-                #input()
-                
-                #print(np.linalg.norm((withheldData[QoI]-y_mean_dev['y_model'])/withheldData[QoI]))
-                #print(np.linalg.norm(withheldData[QoI]-y_mean_dev['y_model']))
-                #print(QoI,h,r)
-                
                 plt.subplot(2,5,cont+5)
                 plt.plot(withheldData[QoI],np.log(withheldData['y']),color='tab:grey')
                 if i == 0:
@@ -180,13 +171,6 @@ elif mode == 'Plot':
                 plt.xlabel(QoI +' '+setToPlot)
                 
             cont +=1
-            
-            #print(np.array(prediction))
-            #print(np.array(target))
-            #print((np.array(prediction)-np.array(target))/np.array(target))
-            #print(QoI + ' Relative RMSE: ' +str(np.linalg.norm((np.array(prediction)-np.array(target))/np.array(target))))
-            #print(QoI + ' Absolute RMSE: ' +str(np.linalg.norm(np.array(prediction)-np.array(target))))
-            ##input()
 
         plt.legend()
         plt.savefig('../RegressionPlots/'+prefix+testID+'_'+setToPlot+'.png', bbox_inches='tight')
