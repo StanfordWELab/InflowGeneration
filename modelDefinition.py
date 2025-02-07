@@ -1,16 +1,22 @@
 import random
-from datetime import datetime
 import joblib
-from matplotlib import pyplot as plt
-import pandas as pd
 import numpy as np
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF, Matern, RationalQuadratic, DotProduct, WhiteKernel
-from scipy.interpolate import interp1d
-from modelDefinition import *
+import pandas as pd
 import warnings
 
-def loadData(heights, location, roughness, yMax, plot=False, home='../../TIGTestMatrixLong/', yInterp=False):
+from matplotlib import pyplot as plt
+from datetime import datetime
+from scipy.interpolate import interp1d
+
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import RBF, Matern, RationalQuadratic, DotProduct, WhiteKernel
+
+from pymoo.algorithms.moo.nsga2 import NSGA2
+from pymoo.optimize import minimize
+from pymoo.core.result import Result
+from pymoo.core.problem import Problem
+
+def loadData(heights, location, roughness, yMax, plot=False, home='./GPRDatabase', yInterp=False):
     ymin = 0.005
     u=15
     data = pd.DataFrame()
@@ -19,67 +25,59 @@ def loadData(heights, location, roughness, yMax, plot=False, home='../../TIGTest
             
         h=heights[i]
         r=roughness[i]
+        
+        database_df = (pd.read_csv(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'.txt',sep='\t'))
             
         for x in location:
             
             prefix = str(str(x)+'_').replace('.','p')
-                
-            #if h == 0.08 and (r == 32 or r == 42):
-                #u = 18
-            #elif h == 0.12 and r == 52:
-                #u = 12
-            #else:
-                #u = 15
             
             temp         = pd.DataFrame()
             interpolated = pd.DataFrame()
-            #print(r)
             
-            avg_u = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'avg_u.00075000.collapse_width.dat',skiprows = 3)
-
-            Umag = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'mag_u.00075000.collapse_width.dat',skiprows = 3)
-
-            rms_u = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'rms_u.00075000.collapse_width.dat',skiprows = 3)
-            rms_v = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'rms_v.00075000.collapse_width.dat',skiprows = 3)
-            rms_w = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'rms_w.00075000.collapse_width.dat',skiprows = 3)
-
-            uv = np.loadtxt(home+'/PFh'+'{0:.2f}'.format(h)+'u'+'{0:.0f}'.format(u)+'r'+'{0:.0f}'.format(r)+'/'+prefix+'uv.00075000.collapse_width.dat',skiprows = 3)
+            interp_df   = database_df[(abs(database_df['x'] - x) < 1e-6)]
+            filtered_df = database_df[(abs(database_df['x'] - x) < 1e-6) & (database_df['y'] >= ymin) & (database_df['y'] <= yMax)]
             
-            temp['y'] = avg_u[(avg_u[:,3]>=ymin) & (avg_u[:,3]<=yMax),3]/yMax
-            #temp['x'] = avg_u[(avg_u[:,3]>ymin) & (avg_u[:,3]<yMax),2]-29.5
-            temp['x'] = x
-            temp['u'] = avg_u[(avg_u[:,3]>=ymin) & (avg_u[:,3]<=yMax),5]
-            temp['umin'] = avg_u[(avg_u[:,3]>=ymin) & (avg_u[:,3]<=yMax),6]
-            temp['uMax'] = avg_u[(avg_u[:,3]>=ymin) & (avg_u[:,3]<=yMax),7]
-            temp['Iu'] = rms_u[(rms_u[:,3]>=ymin) & (rms_u[:,3]<=yMax),5]/Umag[(Umag[:,3]>=ymin) & (Umag[:,3]<=yMax),5]
-            temp['Iv'] = rms_v[(rms_v[:,3]>=ymin) & (rms_v[:,3]<=yMax),5]/Umag[(Umag[:,3]>=ymin) & (Umag[:,3]<=yMax),5]
-            temp['Iw'] = rms_w[(rms_w[:,3]>=ymin) & (rms_w[:,3]<=yMax),5]/Umag[(Umag[:,3]>=ymin) & (Umag[:,3]<=yMax),5]
-            temp['Iuv'] = abs(uv[(uv[:,3]>=ymin) & (uv[:,3]<=yMax),5]/(Umag[(Umag[:,3]>=ymin) & (Umag[:,3]<=yMax),5]**2))
-            temp['uu'] = rms_u[(rms_u[:,3]>=ymin) & (rms_u[:,3]<=yMax),5]**2
-            temp['vv'] = rms_v[(rms_v[:,3]>=ymin) & (rms_v[:,3]<=yMax),5]**2
-            temp['ww'] = rms_w[(rms_w[:,3]>=ymin) & (rms_w[:,3]<=yMax),5]**2
-            temp['uv'] = abs(uv[(uv[:,3]>=ymin) & (uv[:,3]<=yMax),5])
-            temp['h'] = h
-            temp['r'] = r
+            temp['x'] = filtered_df['x'].round(1).astype(float)
+            temp['y'] = filtered_df['y']/yMax
+            temp['u'] = filtered_df['x-velocity'].copy(deep=True)
             
-            U_yMax_interp = (interp1d(avg_u[:,3], avg_u[:,5])(yMax)).item()
-            #U_yMax_temp = np.max(temp['u'])
-            #U_normalize = max([U_yMax_interp,U_yMax_temp])
+            temp['uu'] = filtered_df['uu-reynolds-stress'].copy(deep=True)
+            temp['vv'] = filtered_df['vv-reynolds-stress'].copy(deep=True)
+            temp['ww'] = filtered_df['ww-reynolds-stress'].copy(deep=True)
+            temp['uv'] = abs(filtered_df['uv-reynolds-stress'].copy(deep=True))
+            
+            temp['Iu']  = np.sqrt(temp['uu'])/filtered_df['x-velocity-magnitude']
+            temp['Iv']  = np.sqrt(temp['vv'])/filtered_df['x-velocity-magnitude']
+            temp['Iw']  = np.sqrt(temp['ww'])/filtered_df['x-velocity-magnitude']
+            temp['Iuv'] = np.sqrt(abs(temp['uv']))/filtered_df['x-velocity-magnitude']
+            
+            temp['h'] = filtered_df['h'].round(2).astype(float)
+            temp['r'] = filtered_df['r'].astype(int)
+            
+            U_yMax_interp = (interp1d(interp_df['y'], interp_df['x-velocity'])(yMax)).item()
+            #print(database_df['y'], database_df['x-velocity'])
+            #U_yMax_interp=1.0
+            
             temp['u'] = temp['u']/U_yMax_interp
             temp['uu'] = temp['uu']/(U_yMax_interp**2)
             temp['uv'] = temp['uv']/(U_yMax_interp**2)
             temp['vv'] = temp['vv']/(U_yMax_interp**2)
             temp['ww'] = temp['ww']/(U_yMax_interp**2)
-            temp['umin'] = temp['umin']/U_yMax_interp
-            temp['uMax'] = temp['uMax']/U_yMax_interp
             
-            lastRow={'x':x, 'y':yMax/yMax, 'u':U_yMax_interp/U_yMax_interp, 'umin':(interp1d(avg_u[:,3], avg_u[:,6])(yMax)).item()/U_yMax_interp, 'uMax':(interp1d(avg_u[:,3], avg_u[:,7])(yMax)).item()/U_yMax_interp
-                    ,'Iu':(interp1d(rms_u[:,3], rms_u[:,5]/Umag[:,5]))(yMax).item(), 'Iv':(interp1d(rms_v[:,3], rms_v[:,5]/Umag[:,5]))(yMax).item()
-                    ,'Iw':(interp1d(rms_w[:,3], rms_w[:,5]/Umag[:,5]))(yMax).item(), 'Iuv':(interp1d(uv[:,3], np.sqrt(abs(uv[:,5])/(Umag[:,5]**2))))(yMax).item()
-                     ,'uu':((interp1d(rms_u[:,3], rms_u[:,5]**2))(yMax).item())/(U_yMax_interp**2), 'vv':((interp1d(rms_v[:,3], rms_v[:,5]**2))(yMax).item())/(U_yMax_interp**2)
-                    ,'ww':((interp1d(rms_w[:,3], rms_w[:,5]**2))(yMax).item())/(U_yMax_interp**2),'uv':abs((interp1d(uv[:,3], uv[:,5]))(yMax).item())/(U_yMax_interp**2),'h':h,'r':r}
+            lastRow={'x':filtered_df['x'].iloc[0], 'y':yMax/yMax, 'u':U_yMax_interp/U_yMax_interp, 'h':filtered_df['h'].iloc[0],'r':filtered_df['r'].iloc[0]
+                   , 'Iu':(interp1d(interp_df['y'], np.sqrt(interp_df['uu-reynolds-stress'])/interp_df['x-velocity-magnitude']))(yMax).item()
+                   , 'Iv':(interp1d(interp_df['y'], np.sqrt(interp_df['vv-reynolds-stress'])/interp_df['x-velocity-magnitude']))(yMax).item()
+                   , 'Iw':(interp1d(interp_df['y'], np.sqrt(interp_df['ww-reynolds-stress'])/interp_df['x-velocity-magnitude']))(yMax).item()
+                   ,'Iuv':(interp1d(interp_df['y'], np.sqrt(abs(interp_df['uv-reynolds-stress']))/interp_df['x-velocity-magnitude']))(yMax).item()
+                   , 'uu':((interp1d(interp_df['y'], interp_df['uu-reynolds-stress']))(yMax).item())/(U_yMax_interp**2)
+                   , 'vv':((interp1d(interp_df['y'], interp_df['vv-reynolds-stress']))(yMax).item())/(U_yMax_interp**2)
+                   , 'ww':((interp1d(interp_df['y'], interp_df['ww-reynolds-stress']))(yMax).item())/(U_yMax_interp**2)
+                   , 'uv':abs((interp1d(interp_df['y'], interp_df['uv-reynolds-stress']))(yMax).item())/(U_yMax_interp**2)}
+            
             
             temp = pd.concat([pd.DataFrame([lastRow]),temp], ignore_index=True)
+            #print(temp)
             
             if isinstance(yInterp, (np.ndarray, np.generic)):
             
@@ -117,6 +115,39 @@ def loadData(heights, location, roughness, yMax, plot=False, home='../../TIGTest
 
     return data
 
+def scale_predictions(model_profile, target_profile, alpha, QoI):
+        
+    ##Predicted output is scaled
+    model_profile = model_profile.loc[model_profile['y']<=alpha*np.max(model_profile['y'])]
+    
+    ##Predicted scaled output vertical scale is normalized between something and 1
+    model_profile['y'] = model_profile['y']/model_profile['y'].max()
+    
+    ##Find the largest minimum and smallest maximum between model output and target data
+    ##This way, the smallest and largest y values are excluded
+    minVal = max([np.min(model_profile['y']),np.min(target_profile['y'])])
+    maxVal = min([np.max(model_profile['y']),np.max(target_profile['y'])])
+    
+    nModel  = len(model_profile.loc[(model_profile['y']>=minVal) & (model_profile['y']<=maxVal)])
+    nTarget = len(target_profile.loc[(target_profile['y']>=minVal) & (target_profile['y']<=maxVal)])
+    
+    if nModel>=nTarget:
+        yQuery = target_profile.loc[(target_profile['y']>=minVal) & (target_profile['y']<=maxVal),'y'].to_numpy()
+        
+        yData   = model_profile.loc[(model_profile['y']>=minVal) & (model_profile['y']<=maxVal),'y'].to_numpy()
+        QoIData = model_profile.loc[(model_profile['y']>=minVal) & (model_profile['y']<=maxVal),'y_model'].to_numpy()
+        
+    else:
+        raise Exception('You need to increase the # of points at which the model is evaluated')
+    
+    QoIQuery = interp1d(model_profile['y'].to_numpy(),model_profile['y_model'].to_numpy())(yQuery)
+                
+    if QoI == 'u':
+        QoIQuery = QoIQuery/interp1d(yData,QoIData)(1.0).item()
+    
+    return  yQuery, QoIQuery
+
+
 class gaussianProcess:
     
     normalization = 'normal'
@@ -153,7 +184,7 @@ class gaussianProcess:
         
         if self.model_loaded == False:
             self.predictive_model = joblib.load(model)
-            print('Model loaded at prediction time')
+            #print('Model loaded at prediction time')
         
         if self.normalization == 'log':
             warnings.filterwarnings("ignore")
@@ -241,6 +272,82 @@ class gaussianProcess:
         joblib.dump(gpr, '../GPRModels/'+directory+'_'+QoI+'/'+str(seed)+'.pkl')
         
         return
+
+class MyProblem(Problem):
+
+    def __init__(self, varDict, hTr, hD, hT, yMax, xList, refAbl, features, QoIs, home, testName):
+    
+        self.trainPoints = hTr
+        self.devPoints = hD
+        self.testPoints = hT
+        self.yMax = yMax
+        self.xList = xList
+        
+        self.targetABL  = refAbl
+        
+        self.targetVars = QoIs
+        self.features = features
+        self.datasetLocation = home
+        self.testPrefix = testName
+        
+        self.nGenerations = 0
+        
+        super().__init__(n_var=4,
+                         n_obj=len(QoIs),
+                         xl=[varDict[r'$h$'][0], varDict[r'$r$'][0],varDict[r'$\alpha$'][0], varDict[r'$x$'][0]],
+                         xu=[varDict[r'$h$'][1], varDict[r'$r$'][1],varDict[r'$\alpha$'][1], varDict[r'$x$'][1]])
+        
+        self.var_names = QoIs
+    
+    def eval_model_delayed(self, h, r, alpha, x):
+        
+        xDiscrete = self.xList[int(np.round(x))]
+        rDiscrete = np.round(r)
+        hDiscrete = np.round(h*100)/100
+        alphaDiscrete = np.round(alpha,2)
+        
+        fit_features = pd.DataFrame()
+        fit_features['y'] = np.concatenate((np.linspace(0.01,0.3,1000),np.linspace(0.3,1.0,1000)),axis=0)
+        fit_features['x'] = xDiscrete
+        fit_features['r'] = rDiscrete
+        fit_features['h'] = hDiscrete
+        
+        trainPoints = {'h':self.trainPoints[:,0],'r':self.trainPoints[:,1],'x':[xDiscrete]}
+        devPoints = {'h':self.devPoints[:,0],'r':self.devPoints[:,1],'x':[xDiscrete]}
+        testPoints = {'h':self.testPoints[:,0],'r':self.testPoints[:,1],'x':[xDiscrete]}
+        gp_model = gaussianProcess(trainPoints, devPoints, testPoints, self.yMax, self.datasetLocation)
+
+        prefix = str(str(xDiscrete)+'_').replace('.','p')
+        
+        scores = [None]*len(self.targetVars)
+        
+        cont = 0
+            
+        for QoI in self.targetVars:
+        
+            model = '../GPRModels/'+prefix+self.testPrefix+'_'+QoI+'.pkl'
+            y_mean = gp_model.predict(model,fit_features,self.features)
+            
+            y_query, model_predictions = scale_predictions(y_mean, self.targetABL, alphaDiscrete, QoI)
+            
+            target = self.targetABL.loc[(self.targetABL['y']>=np.min(y_query)) & (self.targetABL['y']<=np.max(y_query)),QoI].to_numpy()
+            
+            scores[cont] = np.linalg.norm(model_predictions-target)
+            cont+=1
+            
+        return scores
+
+    def _evaluate(self, params, out, *args, **kwargs):
+        
+        nIndividuals = params.shape[0]
+        
+        temp = joblib.Parallel(n_jobs=12)(joblib.delayed(self.eval_model_delayed)(params[i,0],params[i,1],params[i,2],params[i,3]) for i in range(nIndividuals))
+        
+        self.nGenerations += 1
+        
+        print(self.nGenerations)
+            
+        out["F"] = np.array(temp)    
     
 try:
     os.mkdir('../GPRModels')

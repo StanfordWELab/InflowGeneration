@@ -29,50 +29,22 @@ colors  = {'0.03':['tab:cyan',(0,(3,5,3,5))]
 
 ###########################################################
 
-### stresses_normalized_25
-##hTrain = [0.04,0.08,0.10,0.12,0.16]
-##rTrain = [32,42,47,52,62]
-##testID = 'stresses_normalized_25'
-
-## stresses_normalized
-##hTrain = [0.04,0.08,0.12,0.16]
-##rTrain = [32,42,52,62]
-##testID = 'adimensional_stresses_normalized'
-
-## stresses_normalized
-#hTrain = [0.04,0.08,0.12,0.16]
-#rTrain = [32,42,52,62]
-#testID = 'model'
-
-## stresses_normalized
-#hTrain = [0.04,0.08,0.12,0.16]
-#rTrain = [32,42,52,62]
-#testID = 'model'
-
-##hTrain = [0.04,0.08]
-##rTrain = [32,42]
-
-#devPairs = np.array([[0.06,37],[0.14,47]])
-#testPairs = np.array([[0.06,47],[0.14,57]])
-
-nCpu = 128
+nCpu = 1
 
 
 # stresses_normalized
-hTrain = [0.08,0.12,0.16]
+hTrain = [0.04,0.08,0.12,0.16]
 rTrain = [52,62,72,82,92]
 testID = 'intensities'
 
-# devPairs = np.array([[0.06,57],[0.06,87],[0.14,67],[0.14,77]])
-# testPairs = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
-devPairs = np.array([[0.14,67],[0.14,77]])
-testPairs = np.array([[0.14,57],[0.14,87]])
+devPairs = np.array([[0.06,57],[0.06,87],[0.14,67],[0.14,77]])
+testPairs = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
 
 #QoIs = ['u','uu','vv','ww']
-QoIs = ['Iu','Iv','Iw']
+QoIs = ['u','Iu','Iv','Iw']
 #QoIs = ['Iuv']
 
-PFDatabase = '../../TIGTestMatrixLong/'
+PFDatabase = './GPRDatabase/'
 
 setToPlot = 'Test'
 
@@ -198,12 +170,12 @@ elif mode == 'Plot':
                 #print(QoI,h,r)
                 
                 plt.subplot(2,5,cont+5)
-                plt.plot(withheldData[QoI],withheldData['y'],color='tab:grey')
+                plt.plot(withheldData[QoI],np.log(withheldData['y']),color='tab:grey')
                 if i == 0:
-                    plt.fill_betweenx(withheldData['y'], withheldData[QoI]*0.9, withheldData[QoI]*1.1, color='tab:grey', alpha=0.3,label=r'Reference $\pm$10%')
+                    plt.fill_betweenx(np.log(withheldData['y']), withheldData[QoI]*0.9, withheldData[QoI]*1.1, color='tab:grey', alpha=0.3,label=r'Reference $\pm$10%')
                 else:
-                    plt.fill_betweenx(withheldData['y'], withheldData[QoI]*0.9, withheldData[QoI]*1.1, color='tab:grey', alpha=0.3)
-                plt.plot(y_mean_dev['y_model'],withheldData['y'],label = 'x='+str(x)+'m, h='+str(h)+'m, r='+str(r))
+                    plt.fill_betweenx(np.log(withheldData['y']), withheldData[QoI]*0.9, withheldData[QoI]*1.1, color='tab:grey', alpha=0.3)
+                plt.plot(y_mean_dev['y_model'],np.log(withheldData['y']),label = 'x='+str(x)+'m, h='+str(h)+'m, r='+str(r))
                 plt.ylabel('y/H')
                 plt.xlabel(QoI +' '+setToPlot)
                 

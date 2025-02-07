@@ -4,48 +4,82 @@ import pandas as pd
 import numpy as np
 import matplotlib
 from matplotlib import pyplot as plt
-from scipy          import optimize
-from scipy.optimize import minimize
-from scipy.optimize import Bounds
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF, Matern, RationalQuadratic, DotProduct, WhiteKernel
-from scipy.interpolate import interp1d
 from modelDefinition import *
 
-font={'size'   : 20}
+font={'size'   : 15}
 matplotlib.rc('font', **font)
-    
-def scale_predictions(model_profile, target_profile, alpha, QoI):
         
-    ##Predicted output is scaled
-    model_profile = model_profile.loc[model_profile['y']<=alpha*np.max(model_profile['y'])]
-    
-    ##Predicted scaled output vertical scale is normalized between something and 1
-    model_profile['y'] = model_profile['y']/model_profile['y'].max()
-    
-    ##Find the largest minimum and smallest maximum between model output and target data
-    ##This way, the smallest and largest y values are excluded
-    minVal = max([np.min(model_profile['y']),np.min(target_profile['y'])])
-    maxVal = min([np.max(model_profile['y']),np.max(target_profile['y'])])
-    
-    nModel  = len(model_profile.loc[(model_profile['y']>=minVal) & (model_profile['y']<=maxVal)])
-    nTarget = len(target_profile.loc[(target_profile['y']>=minVal) & (target_profile['y']<=maxVal)])
-    
-    if nModel>=nTarget:
-        yQuery = target_profile.loc[(target_profile['y']>=minVal) & (target_profile['y']<=maxVal),'y'].to_numpy()
+def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs):
+
+    xPlot = np.linspace(0,1,len(QoIs))
+
+    y0Plot,y1Plot = [(pyMooResults.F.min(axis=0)).min()*0.95,(pyMooResults.F.max(axis=0)).max()*1.05]
+
         
-        yData   = model_profile.loc[(model_profile['y']>=minVal) & (model_profile['y']<=maxVal),'y'].to_numpy()
-        QoIData = model_profile.loc[(model_profile['y']>=minVal) & (model_profile['y']<=maxVal),'y_model'].to_numpy()
-        
+    if len(pyMooResults.X) == 2:
+        cont0 = 211
     else:
-        raise Exception('You need to increase the # of points at which the model is evaluated')
-    
-    QoIQuery = interp1d(model_profile['y'].to_numpy(),model_profile['y_model'].to_numpy())(yQuery)
-                
-    if QoI == 'u':
-        QoIQuery = QoIQuery/interp1d(yData,QoIData)(1.0).item()
-    
-    return  yQuery, QoIQuery
+        cont0 = 221
+        
+    paramNames =[r'$h$',r'$r$',r'$\alpha$',r'$x$']
+
+    my_dpi = 100
+    plt.figure(figsize=(2200/my_dpi, 1200/my_dpi), dpi=my_dpi)
+            
+    cont = 0
+    for param in (pyMooResults.X).T:
+        
+        
+        vmin,vmax=[param.min(), param.max()]
+        
+        if paramNames[cont] == r'$h$':
+            vmin, vmax = [-0.005, 0.195]
+            cm = plt.cm.tab20
+        if paramNames[cont] == r'$r$':
+            vmin, vmax = [np.round(np.min(param))-5, np.round(np.max(param))+5]
+            cm = plt.cm.hsv
+        if paramNames[cont] == r'$\alpha$':
+            vmin, vmax = [0.05, 1.05]
+            cm = plt.cm.tab20
+        if paramNames[cont] == r'$x$':
+            param = [xValues.index(p) for p in param]
+            vmin, vmax = [-0.5,19.5]
+            cm = plt.cm.tab20
+        
+        norm = plt.Normalize(vmin, vmax)
+        sm = plt.cm.ScalarMappable(cmap=cm, norm=norm)
+        
+        plt.subplot(cont+cont0)
+        
+        idx=0
+        for yVal in pyMooResults.F:
+            
+            plt.plot(xPlot,yVal,color=cm(norm(param[idx])))
+            idx+=1
+        
+        plt.ylabel('RMSE')
+            
+        cbar=plt.colorbar(sm)
+        cbar.set_label(decisionVars[cont])
+        
+        for x in xPlot:
+            plt.plot([x]*10,np.linspace(y0Plot,y1Plot,10),color='black',alpha=0.5,linewidth=2)
+            plt.xticks(xPlot,labels=QoIs)
+        
+        if paramNames[cont] == r'$h$':
+            cbar.set_ticks(np.linspace(0.04,0.18,15))
+        #if paramNames[cont] == r'$r$':
+            #cbar.set_ticks([52,57,62,67,72,77,82,87,92])
+        if paramNames[cont] == r'$\alpha$':
+            cbar.set_ticks(np.linspace(0.1,1.0,10))
+        if paramNames[cont] == r'$x$':
+            cbar.set_ticks(np.linspace(0,len(xValues)-1,len(xValues)))
+            cbar.set_ticklabels(xValues)
+            
+        cont+=1
+        
+    plt.axis('tight')
+    plt.show()
     
 def evaluate_setup(hTr, hD, hT, yMax, parameters, refAbl, features, QoIs, home, testName):
     
@@ -97,61 +131,63 @@ def evaluate_setup(hTr, hD, hT, yMax, parameters, refAbl, features, QoIs, home, 
     
 ###############################################################################################
 
-PFDatabase = '../../TIGTestMatrixLong/'
+PFDatabase = './GPRDatabase'
 
 #fNames = ['testABL']
-#fNames = ['TPU_ABL']
+fNames = ['TPU_ABL']
 #fNames = ['themisABL']
 #fNames = ['inflowProfile_U10_Cat4_1uu1vv1ww']
 #fNames = ['inflowProfile_U10_Cat1_1uu1vv1ww','inflowProfile_U10_Cat2_1uu1vv1ww','inflowProfile_U10_Cat3_1uu1vv1ww','inflowProfile_U10_Cat4_1uu1vv1ww']
 #fNames = ['inflowProfile_Cat2_1uu1vv1ww','inflowProfile_Cat3_1uu1vv1ww']
-fNames = ['TPU_highrise_14_middle']
-fNames = ['TPU_highrise_14']
+#fNames = ['TPU_highrise_14_middle_higher']
+#fNames = ['TPU_highrise_14']
 
-testID = 'intensities'
 
-#hList = [0.08,0.10,0.12,0.14,0.16]
-#xList = [0.3,0.6,1.2,1.8,2.7,3.6,5.0,7.0,9.0,11.0,13.0]
-#alphaList = [0.1,0.2,0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-#rList = [52,62,72,82,92]
+##### Define these variables for Optimize-Gridsearch ####
+#hList = [0.04,0.06,0.08,0.10,0.12,0.14,0.16]
+#xList = [[0.3,0.6,0.9,1.2,1.5,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]]
+#alphaList = [0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
+#rList = [52,57,62,67,72,77,82,87,92]
+#weights={'u':0.25,'Iu':0.25,'Iv':0.25,'Iw':0.25}
 
-hList = [0.08,0.10,0.14]
-xList = [0.6,1.5,3.0,11.0]
-#xList = [0.3,1.8,3.3,7.0]
-alphaList = [1.0]
-rList = [52,62,72,82,92]
 
-hSearch = [0.14]
-xSearch = [1.5]
-alphaSearch = alphaList
-#alphaSearch = [0.7]
-rSearch = rList
+#### Define these variables for Optimize-NSGA ####
+xList = [0.3,0.6,0.9,1.2,1.5,1.8,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]
+variables = {r'$h$':[0.035,0.1649],r'$r$':[51.5,92.49],r'$\alpha$':[0.2,0.7],r'$x$':[-0.49,len(xList)-0.51]}
+population_size = 128
+n_generations = 50
 
-nCpu = 12
 
-nResults = 3
+##### Define these variables for Plot-Gridsearch ####
+#hSearch = hList
+#xSearch = xList
+#alphaSearch = alphaList
+#rSearch = rList
+#nResults = 4
 
-#targetQoIs = ['u','uu','vv','ww']
-#weights={'u':0.25,'uu':0.25,'ww':0.25,'vv':0.25}
-targetQoIs = ['u','Iu']
-weights={'u':0.25,'Iu':1.0}
-
-everyQoI = ['u','Iu','Iv','Iw']
-#everyQoI = ['u','uu','vv','ww']
+#### Define these variables for Plot-Setup ####
+parameters = {'$h$':[0.06,0.16],r'$\alpha$':[0.24,0.48],r'$r$':[73,66],r'$x$':[1.2,3.3]}
 
 #### metric is 'RMSE' or 'RMSE relative'
 metric = 'RMSE'
 uncertainty = True
+testID = 'intensities'
+nCpu = 12
+
+targetQoIs = ['u','Iu']
 
 ###############################################################################################
 
-mode = sys.argv[1]
+options = ['Optimize-Gridsearch','Optimize-NSGA','Plot-Gridsearch','Plot-NSGA','Plot-Setup']
+everyQoI = ['u','Iu','Iv','Iw']
+features = ['y','h','r']
+varNames = [r'$h$',r'$r$',r'$\alpha$',r'$x$']
 
 yMax= 1.0
-features = ['y','h','r']
 
-hTrain = [0.08,0.12,0.16]
+hTrain = [0.04,0.08,0.12,0.16]
 rTrain = [52,62,72,82,92]
+
 trainPairs = np.zeros((len(hTrain)*len(rTrain),2))
 cont=0
 for h in hTrain:
@@ -159,14 +195,27 @@ for h in hTrain:
         trainPairs[cont,:] = [h, r]
         cont+=1
 
-devPairs = np.array([[0.14,67],[0.14,77]])
-testPairs = np.array([[0.14,57],[0.14,87]])
+devPairs = np.array([[0.06,57],[0.06,87],[0.14,67],[0.14,77]])
+testPairs = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
+
+try: 
+    mode = sys.argv[1]
+except:
+    mode = []
+    
+while not(mode in options):
+    print('Choose one of the following options:')
+    for opt in options:
+        print('   - '+opt)
+    mode = input('\n')
+    
+    if not(mode in options):
+        print('Invalid selection, try again')
 
 #xABL = 0.9
 #hABL = 0.08
 #rABL = 47
 ##ref_abl = loadData([hABL], [xABL], [rABL], yMax, plot=False, home='../../PFTestMatrix')
-
 
 
 for fName in fNames:
@@ -184,26 +233,13 @@ for fName in fNames:
         if rsc in header:
             ref_abl[rsc] = ref_abl[rsc]/(Uref**2)
             
-    #ref_abl['uu'] = ref_abl['uu']/(Uref**2)
-    #ref_abl['vv'] = ref_abl['vv']/(Uref**2)
-    #ref_abl['ww'] = ref_abl['ww']/(Uref**2)
-    #ref_abl['uv'] = ref_abl['uv']/(Uref**2)
-    #ref_abl['uw'] = ref_abl['uw']/(Uref**2)
-    #ref_abl['vw'] = ref_abl['vw']/(Uref**2)
-    if 'u min' in header:
-        ref_abl['u min'] = ref_abl['u min']/Uref
-    if 'u max' in header:
-        ref_abl['u max'] = ref_abl['u max']/Uref
     QoIs = []
 
     for QoI in everyQoI:
         if (QoI in header) and (QoI in targetQoIs):
             QoIs.append(QoI)
 
-    #opt = optimizer(ref_abl, yMax, hTrain, features)
-    #hABL, xABL = opt.findParameters()
-
-    if mode == 'Gridsearch':
+    if mode == 'Optimize-Gridsearch':
 
         nTests = len(hList)*len(xList)*len(rList)*len(alphaList)
         exploration_matrix = np.zeros((nTests,4))
@@ -228,8 +264,44 @@ for fName in fNames:
                 df = pd.concat([df, pd.DataFrame([dct])], ignore_index=True)
 
         df.to_csv('TestCases/'+fName+'_optimal.csv',index=False,index_label=False)
+    
+    elif mode =='Optimize-NSGA':
 
-    elif mode == 'Plot':
+        algorithm = NSGA2(pop_size=population_size)
+
+        problemUser = MyProblem(variables,trainPairs,devPairs,testPairs,yMax,xList,ref_abl,features,QoIs,PFDatabase,testID)
+        resUser = minimize(problemUser, algorithm, ('n_gen', n_generations), seed=1, verbose=False)
+
+        # Save Pareto front (Objective values) to CSV
+        df_obj = pd.DataFrame(resUser.F, columns=[targetQoIs[i] for i in range(resUser.F.shape[1])])
+        df_obj.to_csv('TestCases/'+fName+"_pareto_front.csv", index=False)
+
+        # Save Decision Variables to CSV
+        df_dec = pd.DataFrame(resUser.X, columns=[varNames[i] for i in range(resUser.X.shape[1])])
+        df_dec.to_csv('TestCases/'+fName+"_decision_variables.csv", index=False)
+        
+    elif mode =='Plot-NSGA':
+
+    # Create a pymoo-like result object
+        RMSEValues   = pd.read_csv('TestCases/'+fName+"_pareto_front.csv")
+        RMSEheader   = RMSEValues.columns.tolist()
+        decisionVars = pd.read_csv('TestCases/'+fName+"_decision_variables.csv")
+        
+        NSGA_results = pd.concat([RMSEValues, decisionVars], axis=1).sort_values(by='u', ascending=False)
+        NSGA_results['$x$'] = [xList[x] for x in NSGA_results['$x$'].round().astype(int).to_numpy()]
+        NSGA_results['$h$'] = ((NSGA_results['$h$']*100).round().astype(int)/100).to_numpy()
+        NSGA_results['$r$'] = NSGA_results['$r$'].round().astype(int).to_numpy()
+        NSGA_results[r'$\alpha$'] = NSGA_results[r'$\alpha$'].round(2).astype(float).to_numpy()
+        NSGA_results = NSGA_results.drop_duplicates(subset=varNames, keep='first').reset_index(drop=True)
+        print(NSGA_results)
+        
+        resUser = Result()
+        resUser.F = NSGA_results[RMSEheader].to_numpy()   # Pareto front
+        resUser.X = NSGA_results[varNames].to_numpy()  # Decision variables
+
+        parallelCoordinatesPlot(resUser, xList, varNames, targetQoIs)
+
+    elif mode == 'Plot-Gridsearch':
 
         df = pd.read_csv('TestCases/'+fName+'_optimal.csv')
         df['cost'] = 0
@@ -289,9 +361,6 @@ for fName in fNames:
                     
                 if i==0:
                     plt.plot(ref_abl[QoI],ref_abl['y'],color='tab:red',label='Target',linewidth=3)
-                    #if (str(QoI+' min') in header) and (str(QoI+' max') in header):
-                        #plt.fill_betweenx(ref_abl['y'], ref_abl[QoI+' min'], ref_abl[QoI+' max'], color='tab:red', alpha=0.3,label=r'Reference and range')
-                    #else:
                     plt.fill_betweenx(ref_abl['y'], ref_abl[QoI]*0.9, ref_abl[QoI]*1.1, color='tab:red', alpha=0.2,label=r'Reference $\pm$10%')
                     
                 line = plt.plot(y_mean['y_model'],y_mean['y'],linestyle='--',linewidth=3
@@ -316,11 +385,85 @@ for fName in fNames:
             cont +=1
 
         plt.legend(frameon=False)
-            
-        print('Best '+str(nResults)+' results:')
-        print(optimum_setup.iloc[0:nResults])
 
         #plt.savefig('../RegressionPlots/'+fName+'_optimal.png', bbox_inches='tight')
+        plt.show()
+        plt.close('all')
+
+    elif mode == 'Plot-Setup':
+        
+        my_dpi = 100
+        plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
+
+        cont=1
+
+        for QoI in ['u','Iu','Iv','Iw']:
+            
+            for i in range(len(parameters[r'$h$'])):
+
+                xTemp = parameters[r'$x$'][i]
+                hTemp = parameters[r'$h$'][i]
+                rTemp = parameters[r'$r$'][i]
+                alphaTemp = parameters[r'$\alpha$'][i]
+
+                fit_features = pd.DataFrame()
+                fit_features['y'] = np.linspace(0.01,1.0,2000)
+                fit_features['x'] = xTemp
+                fit_features['h'] = hTemp
+                fit_features['r'] = rTemp
+                fit_features['alpha'] = alphaTemp
+            
+                trainPoints = {'h':trainPairs[:,0],'r':trainPairs[:,1],'x':[xTemp]}
+                devPoints = {'h':devPairs[:,0],'r':devPairs[:,1],'x':[xTemp]}
+                testPoints = {'h':testPairs[:,0],'r':testPairs[:,1],'x':[xTemp]}
+
+                gp = gaussianProcess(trainPoints, devPoints, testPoints, yMax, PFDatabase)
+                
+                prefix = str(str(xTemp)+'_').replace('.','p')
+                directory = prefix+testID
+                model = '../GPRModels/'+directory+'_'+QoI+'.pkl'
+                
+                y_mean = gp.predict(model,fit_features,features)
+                y_mean = y_mean.loc[y_mean['y']<=alphaTemp*np.max(y_mean['y'])]
+                y_mean['y'] = y_mean['y']/(y_mean['y'].max())
+                
+                if QoI == 'u':
+                    y_mean['y_model'] = y_mean['y_model']/(y_mean['y_model'].iloc[-1])
+                    y_mean['y_std'] = y_mean['y_std']/(y_mean['y_model'].iloc[-1])
+                    
+                plt.subplot(2,2,cont)
+                
+                if i==0 and (QoI in header):
+                    plt.plot(ref_abl[QoI],ref_abl['y'],color='tab:red',label='Target',linewidth=3)
+                    plt.fill_betweenx(ref_abl['y'], ref_abl[QoI]*0.9, ref_abl[QoI]*1.1, color='tab:red', alpha=0.2,label=r'Reference $\pm$10%')
+                    
+                line = plt.plot(y_mean['y_model'],y_mean['y'],linestyle='--',linewidth=3
+                        ,label=str(i+1)+r': x='+'{0:.2f}'.format(xTemp)+'m,h='+'{0:.2f}'.format(hTemp)+'m'+r'm,$\alpha$='+'{0:.2f}'.format(alphaTemp)+r',r='+'{0:.2f}'.format(rTemp))
+                
+                if QoI in header:
+                    max_x = np.ceil((1.2*max([np.max(ref_abl[QoI]),np.max(y_mean['y_model'])])*10000).astype(int))/10000
+                else:
+                    max_x = np.ceil(1.2*np.max(y_mean['y_model'])*10000).astype(int)/10000
+                
+                plt.xlim(0,1.2*max_x)
+                plt.xlabel(QoI)
+                
+                plt.ylim(0,1)
+                plt.yticks([0.5,1.0])
+                
+                if QoI=='u'or QoI == 'Iv':
+                    plt.ylabel('y/H')
+                else:
+                    plt.gca().set_yticklabels([])
+                
+                if uncertainty == True:
+                    plt.fill_betweenx(y_mean['y'], y_mean['y_model']-2*y_mean['y_std'], y_mean['y_model']+2*y_mean['y_std'], color=line[0].get_color(), alpha=0.2)
+                
+            cont +=1
+
+        plt.legend(frameon=False)
+
+        plt.savefig('../RegressionPlots/'+fName+'_test.png', bbox_inches='tight')
         plt.show()
         plt.close('all')
 
