@@ -16,7 +16,7 @@ from pymoo.optimize import minimize
 from pymoo.core.result import Result
 from pymoo.core.problem import Problem
 
-def loadData(heights, location, roughness, yMax, plot=False, home='./GPRDatabase', yInterp=False):
+def loadData(heights, location, roughness, yMax, home='./GPRDatabase', yInterp=False):
     ymin = 0.005
     u=15
     data = pd.DataFrame()
@@ -56,8 +56,6 @@ def loadData(heights, location, roughness, yMax, plot=False, home='./GPRDatabase
             temp['r'] = filtered_df['r'].astype(int)
             
             U_yMax_interp = (interp1d(interp_df['y'], interp_df['x-velocity'])(yMax)).item()
-            #print(database_df['y'], database_df['x-velocity'])
-            #U_yMax_interp=1.0
             
             temp['u'] = temp['u']/U_yMax_interp
             temp['uu'] = temp['uu']/(U_yMax_interp**2)
@@ -146,6 +144,130 @@ def scale_predictions(model_profile, target_profile, alpha, QoI):
         QoIQuery = QoIQuery/interp1d(yData,QoIData)(1.0).item()
     
     return  yQuery, QoIQuery
+        
+def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs):
+
+    xPlot = np.linspace(0,1,len(QoIs))
+
+    y0Plot,y1Plot = [(pyMooResults.F.min(axis=0)).min()*0.95,(pyMooResults.F.max(axis=0)).max()*1.05]
+
+        
+    if len(pyMooResults.X) == 2:
+        cont0 = 211
+    else:
+        cont0 = 221
+        
+    paramNames =[r'$h$',r'$r$',r'$\alpha$',r'$x$']
+
+    my_dpi = 100
+    plt.figure(figsize=(2200/my_dpi, 1200/my_dpi), dpi=my_dpi)
+            
+    cont = 0
+    for param in (pyMooResults.X).T:
+        
+        
+        vmin,vmax=[param.min(), param.max()]
+        
+        if paramNames[cont] == r'$h$':
+            vmin, vmax = [-0.005, 0.195]
+            cm = plt.cm.tab20
+        if paramNames[cont] == r'$r$':
+            vmin, vmax = [np.round(np.min(param))-5, np.round(np.max(param))+5]
+            cm = plt.cm.hsv
+        if paramNames[cont] == r'$\alpha$':
+            vmin, vmax = [0.05, 1.05]
+            cm = plt.cm.tab20
+        if paramNames[cont] == r'$x$':
+            param = [xValues.index(p) for p in param]
+            vmin, vmax = [-0.5,19.5]
+            cm = plt.cm.tab20
+        
+        norm = plt.Normalize(vmin, vmax)
+        sm = plt.cm.ScalarMappable(cmap=cm, norm=norm)
+        
+        plt.subplot(cont+cont0)
+        
+        idx=0
+        for yVal in pyMooResults.F:
+            
+            plt.plot(xPlot,yVal,color=cm(norm(param[idx])))
+            
+            if idx%5 == 0:
+                plt.text(-0.01, yVal[0], str(idx), fontsize=10, ha='right', va='center')
+            
+            idx+=1
+        
+        plt.ylabel('RMSE')
+            
+        cbar=plt.colorbar(sm)
+        cbar.set_label(decisionVars[cont])
+        
+        for x in xPlot:
+            plt.plot([x]*10,np.linspace(y0Plot,y1Plot,10),color='black',alpha=0.5,linewidth=2)
+            plt.xticks(xPlot,labels=QoIs)
+        
+        if paramNames[cont] == r'$h$':
+            cbar.set_ticks(np.linspace(0.04,0.18,15))
+        #if paramNames[cont] == r'$r$':
+            #cbar.set_ticks([52,57,62,67,72,77,82,87,92])
+        if paramNames[cont] == r'$\alpha$':
+            cbar.set_ticks(np.linspace(0.1,1.0,10))
+        if paramNames[cont] == r'$x$':
+            cbar.set_ticks(np.linspace(0,len(xValues)-1,len(xValues)))
+            cbar.set_ticklabels(xValues)
+            
+        cont+=1
+        
+    plt.axis('tight')
+    plt.show()
+    
+def evaluate_setup(hTr, hD, hT, yMax, parameters, refAbl, features, QoIs, home, testName):
+    
+    h     = parameters[0]
+    x     = parameters[1]
+    r     = parameters[2]
+    alpha = parameters[3]
+    
+    print(h,r,x,alpha)
+    
+    fit_features = pd.DataFrame()
+    
+    trainPoints = {'h':hTr[:,0],'r':hTr[:,1],'x':[x]}
+    devPoints = {'h':hD[:,0],'r':hD[:,1],'x':[x]}
+    testPoints = {'h':hT[:,0],'r':hT[:,1],'x':[x]}
+    gp = gaussianProcess(trainPoints, devPoints, testPoints, yMax, home)
+    
+    prefix = str(str(x)+'_').replace('.','p')
+    directory = prefix+testName
+    
+        
+    fit_features['x'] = x
+    #fit_features['y'] = np.linspace(0.01,1.0,1000)
+    fit_features['y'] = np.concatenate((np.linspace(0.01,0.3,1000),np.linspace(0.3,1.0,1000)),axis=0)
+    fit_features['h'] = h
+    fit_features['r'] = r
+    dictionary = {}
+    
+    dictionary['h'] = h
+    dictionary['x'] = x
+    dictionary['r'] = r
+    dictionary['alpha'] = alpha
+    
+    for QoI in QoIs:
+        
+        model = '../GPRModels/'+directory+'_'+QoI+'.pkl'
+        y_mean = gp.predict(model,fit_features,features)
+        
+        y_query, model_predictions = scale_predictions(y_mean, refAbl, alpha, QoI)
+        
+        target = refAbl.loc[(refAbl['y']>=np.min(y_query)) & (refAbl['y']<=np.max(y_query)),QoI].to_numpy()
+        
+        #RMSE_relative  = np.linalg.norm((y_mean['y_model']-refAbl[QoI]).to_numpy()/refAbl[QoI].to_numpy())
+        #RMSE_relative  = np.linalg.norm((model_predictions-target)/target)
+        dictionary['RMSE relative '+QoI] = np.linalg.norm((model_predictions-target)/target)
+        dictionary['RMSE '+QoI] = np.linalg.norm(model_predictions-target)
+
+    return dictionary
 
 
 class gaussianProcess:
@@ -158,13 +280,9 @@ class gaussianProcess:
         
         self.yMax = yMax
         
-        self.trainData = loadData(trainPoints['h'], trainPoints['x'], trainPoints['r'], self.yMax , False, homeDirectory, yInterp)
-        self.devData  = loadData(devPoints['h'], devPoints['x'], devPoints['r'], self.yMax , False, homeDirectory, yInterp)
-        self.testData = loadData(testPoints['h'], testPoints['x'], testPoints['r'], self.yMax , False, homeDirectory, yInterp)
-        
-        #print(self.devData)
-        #print(self.testData)
-        #input()
+        self.trainData = loadData(trainPoints['h'], trainPoints['x'], trainPoints['r'], self.yMax, homeDirectory, yInterp)
+        self.devData  = loadData(devPoints['h'], devPoints['x'], devPoints['r'], self.yMax, homeDirectory, yInterp)
+        self.testData = loadData(testPoints['h'], testPoints['x'], testPoints['r'], self.yMax, homeDirectory, yInterp)
         
         self.meanVal = self.trainData.mean()
         self.stdVal  = self.trainData.std()
@@ -219,7 +337,6 @@ class gaussianProcess:
         from sklearn.gaussian_process.kernels import RBF, Matern, RationalQuadratic, DotProduct, WhiteKernel
         
         gpr = GaussianProcessRegressor(kernel=eval(expression),alpha = alpha, random_state=seed, normalize_y=True)
-        #gpr = GaussianProcessRegressor(kernel=eval(expression),alpha = alpha, random_state=1)
         
         if self.normalization == 'log':
             gpr.fit(np.log(self.trainData[features].to_numpy()), self.trainData[[QoI]].to_numpy())
@@ -231,26 +348,12 @@ class gaussianProcess:
             y_dev, _  = gpr.predict(((self.devData[features]-self.meanVal[features])/self.stdVal[features]).to_numpy(), return_std=True)
             y_test, _ = gpr.predict(((self.testData[features]-self.meanVal[features])/self.stdVal[features]).to_numpy(), return_std=True)
             
-        #print(y_dev)
-        #print(self.devData[QoI].to_numpy())
-        ##input()
-        
-        #print(y_dev)
-        #print(self.devData[QoI].to_numpy())
-        #plt.figure()
-        #plt.plot(y_dev)
-        #plt.plot(self.devData[QoI].to_numpy())
-        #plt.show()
         
         dev_RMSE_relative  = np.linalg.norm((y_dev-self.devData[QoI].to_numpy())/self.devData[QoI].to_numpy())
         dev_RMSE  = np.linalg.norm(y_dev-self.devData[QoI].to_numpy())
         
         test_RMSE_relative = np.linalg.norm((y_test-self.testData[QoI].to_numpy())/self.testData[QoI].to_numpy())
         test_RMSE = np.linalg.norm(y_test-self.testData[QoI].to_numpy())
-        
-        #print(QoI + ' Relative RMSE: '+ str(dev_RMSE_relative))
-        #print(QoI + ' Absolute RMSE:' + str(dev_RMSE))
-        #input()
         
         with open('../GPRModels/'+directory+'_'+QoI+'.dat','a+') as out:
             out.write('\n==============================================')

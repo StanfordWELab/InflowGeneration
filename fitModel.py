@@ -35,13 +35,13 @@ nCpu = 1
 # stresses_normalized
 hTrain = [0.04,0.08,0.12,0.16]
 rTrain = [52,62,72,82,92]
-testID = 'intensities'
+testID = 'inflow'
 
 devPairs = np.array([[0.06,57],[0.06,87],[0.14,67],[0.14,77]])
 testPairs = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
 
-#QoIs = ['u','uu','vv','ww']
-QoIs = ['u','Iu','Iv','Iw']
+QoIs = ['u','uu','vv','ww']
+#QoIs = ['u','Iu','Iv','Iw']
 #QoIs = ['Iuv']
 
 PFDatabase = './GPRDatabase/'
@@ -95,6 +95,40 @@ if mode == 'Gridsearch':
 
 #############################################################
 
+elif mode == 'Inflow':
+    
+    print('here')
+
+    yMax= 1.5
+
+    for x in xModels:
+        
+        trainPoints = {'h':trainPairs[:,0],'r':trainPairs[:,1],'x':[x]}
+        devPoints = {'h':devPairs[:,0],'r':devPairs[:,1],'x':[x]}
+        testPoints = {'h':testPairs[:,0],'r':testPairs[:,1],'x':[x]}
+        
+        prefix = str(str(x)+'_').replace('.','p')
+        directory = prefix+testID
+
+        for QoI in QoIs:
+
+            gp = gaussianProcess(trainPoints, devPoints, testPoints, yMax, PFDatabase, np.linspace(0.01,1.0,150))
+            
+            try:
+                os.mkdir('../GPRModels/'+directory+'_'+QoI)
+            except:
+                print('Directory already exist')
+            
+                    
+            with open('../GPRModels/'+directory+'_'+QoI+'.dat', 'w+') as out:
+                now = datetime.now()
+                out.write('\n'*10+'Gridsearch performed on ' + str(now.strftime("%d %m %Y, %H:%M:%S"))+ '\n'*10)
+                
+            _ = joblib.Parallel(n_jobs=nCpu)(joblib.delayed(gp.gridsearch)(seed, features, directory, QoI)
+                                    for seed in range(0,256))
+
+#############################################################
+
 
 elif mode == 'Plot':
 
@@ -123,7 +157,7 @@ elif mode == 'Plot':
                 h=trainPairs[i,0]
                 r=trainPairs[i,1]
                 
-                trainData = loadData([h], [x], [r], yMax, False, PFDatabase, np.linspace(0.01,1.0,100))
+                trainData = loadData([h], [x], [r], yMax, PFDatabase, np.linspace(0.01,1.0,100))
                 
                 prefix = str(str(x)+'_').replace('.','p')
                 directory = prefix+testID
@@ -148,7 +182,7 @@ elif mode == 'Plot':
                 h=withheld[i,0]
                 r=withheld[i,1]
                 
-                withheldData = loadData([h], [x], [r], yMax, False, PFDatabase, np.linspace(0.01,1.0,100))
+                withheldData = loadData([h], [x], [r], yMax, PFDatabase, np.linspace(0.01,1.0,100))
                 
                 prefix = str(str(x)+'_').replace('.','p')
                 directory = prefix+testID+'_'+QoI
