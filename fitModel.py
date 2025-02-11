@@ -35,7 +35,7 @@ nCpu = 1
 # stresses_normalized
 hTrain = [0.04,0.08,0.12,0.16]
 rTrain = [52,62,72,82,92]
-testID = 'inflow'
+testID = 'inflow_stresses'
 
 devPairs = np.array([[0.06,57],[0.06,87],[0.14,67],[0.14,77]])
 testPairs = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
@@ -63,7 +63,7 @@ for h in hTrain:
 
 features = ['y','h','r']
 
-yMax= 1.0
+yMax= 1.5
 
 if mode == 'Gridsearch':
 
@@ -164,7 +164,7 @@ elif mode == 'Plot':
                 
                 model = '../GPRModels/'+directory+'_'+QoI+'.pkl'
                 
-                y_mean_train = gp.predict(model,trainData,features)
+                y_mean_train = gp.predict(model,trainData,features,QoI)
                 
                 plt.subplot(2,5,cont)
                 plt.plot(trainData[QoI],trainData['y'],color='tab:grey')
@@ -189,18 +189,18 @@ elif mode == 'Plot':
                 
                 model = '../GPRModels/'+directory+'.pkl'
                 
-                y_mean_dev = gp.predict(model,withheldData,features)
+                y_mean_dev = gp.predict(model,withheldData,features,QoI)
                 
                 target.extend(withheldData[QoI].to_numpy()) 
                 prediction.extend(y_mean_dev['y_model'].to_numpy())
                 
                 plt.subplot(2,5,cont+5)
-                plt.plot(withheldData[QoI],np.log(withheldData['y']),color='tab:grey')
+                plt.plot(withheldData[QoI],withheldData['y'],color='tab:grey')
                 if i == 0:
-                    plt.fill_betweenx(np.log(withheldData['y']), withheldData[QoI]*0.9, withheldData[QoI]*1.1, color='tab:grey', alpha=0.3,label=r'Reference $\pm$10%')
+                    plt.fill_betweenx(withheldData['y'], withheldData[QoI]*0.9, withheldData[QoI]*1.1, color='tab:grey', alpha=0.3,label=r'Reference $\pm$10%')
                 else:
-                    plt.fill_betweenx(np.log(withheldData['y']), withheldData[QoI]*0.9, withheldData[QoI]*1.1, color='tab:grey', alpha=0.3)
-                plt.plot(y_mean_dev['y_model'],np.log(withheldData['y']),label = 'x='+str(x)+'m, h='+str(h)+'m, r='+str(r))
+                    plt.fill_betweenx(withheldData['y'], withheldData[QoI]*0.9, withheldData[QoI]*1.1, color='tab:grey', alpha=0.3)
+                plt.plot(y_mean_dev['y_model'],withheldData['y'],label = 'x='+str(x)+'m, h='+str(h)+'m, r='+str(r))
                 plt.ylabel('y/H')
                 plt.xlabel(QoI +' '+setToPlot)
                 

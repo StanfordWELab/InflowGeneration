@@ -221,6 +221,85 @@ def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs):
     plt.axis('tight')
     plt.show()
     
+def plotSetup(trainPairs, devPairs, testPairs, yMax, features, testID, PFDatabase, parameters, ref_abl, QoIs, uncertainty):
+        
+    header = list(ref_abl.columns)
+    
+    my_dpi = 100
+    plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
+
+    cont=1
+
+    for QoI in ['u','Iu','Iv','Iw']:
+        
+        for i in range(len(parameters[r'$h$'])):
+
+            xTemp = parameters[r'$x$'][i]
+            hTemp = parameters[r'$h$'][i]
+            rTemp = parameters[r'$r$'][i]
+            alphaTemp = parameters[r'$\alpha$'][i]
+
+            fit_features = pd.DataFrame()
+            fit_features['y'] = np.linspace(0.01,1.0,2000)
+            fit_features['x'] = xTemp
+            fit_features['h'] = hTemp
+            fit_features['r'] = rTemp
+            fit_features['alpha'] = alphaTemp
+        
+            trainPoints = {'h':trainPairs[:,0],'r':trainPairs[:,1],'x':[xTemp]}
+            devPoints = {'h':devPairs[:,0],'r':devPairs[:,1],'x':[xTemp]}
+            testPoints = {'h':testPairs[:,0],'r':testPairs[:,1],'x':[xTemp]}
+
+            gp = gaussianProcess(trainPoints, devPoints, testPoints, yMax, PFDatabase)
+            
+            prefix = str(str(xTemp)+'_').replace('.','p')
+            directory = prefix+testID
+            model = '../GPRModels/'+directory+'_'+QoI+'.pkl'
+            
+            y_mean = gp.predict(model,fit_features,features,QoI)
+            y_mean = y_mean.loc[y_mean['y']<=alphaTemp*np.max(y_mean['y'])]
+            y_mean['y'] = y_mean['y']/(y_mean['y'].max())
+            
+            if QoI == 'u':
+                y_mean['y_model'] = y_mean['y_model']/(y_mean['y_model'].iloc[-1])
+                y_mean['y_std'] = y_mean['y_std']/(y_mean['y_model'].iloc[-1])
+                
+            plt.subplot(2,2,cont)
+            
+            if i==0 and (QoI in header):
+                plt.plot(ref_abl[QoI],ref_abl['y'],color='tab:red',label='Target',linewidth=3)
+                plt.fill_betweenx(ref_abl['y'], ref_abl[QoI]*0.9, ref_abl[QoI]*1.1, color='tab:red', alpha=0.2,label=r'Reference $\pm$10%')
+                
+            line = plt.plot(y_mean['y_model'],y_mean['y'],linestyle='--',linewidth=3
+                    ,label=str(parameters['idx'][i])+' h='+'{0:.2f}'.format(hTemp)+'m, r='+'{0:.0f}'.format(rTemp)+',\n'+r'$\alpha$='+'{0:.2f}'.format(alphaTemp)+', x='+'{0:.2f}'.format(xTemp)+'m')
+            
+            if QoI in header:
+                max_x = np.ceil((1.2*max([np.max(ref_abl[QoI]),np.max(y_mean['y_model'])])*10000).astype(int))/10000
+            else:
+                max_x = np.ceil(1.2*np.max(y_mean['y_model'])*10000).astype(int)/10000
+            
+            plt.xlim(0,1.2*max_x)
+            plt.xlabel(QoI)
+            
+            plt.ylim(0,1)
+            plt.yticks([0.5,1.0])
+            
+            if QoI=='u'or QoI == 'Iv':
+                plt.ylabel('y/H')
+            else:
+                plt.gca().set_yticklabels([])
+            
+            if uncertainty == True:
+                plt.fill_betweenx(y_mean['y'], y_mean['y_model']-2*y_mean['y_std'], y_mean['y_model']+2*y_mean['y_std'], color=line[0].get_color(), alpha=0.2)
+            
+        cont +=1
+
+    plt.legend(frameon=False)
+
+    #plt.savefig('../RegressionPlots/'+fName+'_test.png', bbox_inches='tight')
+    plt.show()
+    plt.close('all')
+    
 def evaluate_setup(hTr, hD, hT, yMax, parameters, refAbl, features, QoIs, home, testName):
     
     h     = parameters[0]
@@ -256,7 +335,7 @@ def evaluate_setup(hTr, hD, hT, yMax, parameters, refAbl, features, QoIs, home, 
     for QoI in QoIs:
         
         model = '../GPRModels/'+directory+'_'+QoI+'.pkl'
-        y_mean = gp.predict(model,fit_features,features)
+        y_mean = gp.predict(model,fit_features,features,QoI)
         
         y_query, model_predictions = scale_predictions(y_mean, refAbl, alpha, QoI)
         
@@ -287,8 +366,28 @@ class gaussianProcess:
         self.meanVal = self.trainData.mean()
         self.stdVal  = self.trainData.std()
         
-        
         return
+    
+    def yTransform(self,df,mode,QoI):
+        
+        #if QoI == 'Iv':
+        
+            #if mode == 'direct':
+                #df['y'] = np.sqrt(df['y'])
+            
+            #if mode == 'inverse':
+                #df['y'] = df['y']**2
+        
+        #if QoI == 'Iv':
+        
+            #if mode == 'direct':
+                #df['y'] = np.log(df['y'])
+            
+            #if mode == 'inverse':
+                #df['y'] = np.exp(df['y'])
+        
+        return df
+        
     
     def loadModel(self,model):
         
@@ -296,7 +395,7 @@ class gaussianProcess:
         self.predictive_model = joblib.load(model)
         print('Model loaded preemptively')
     
-    def predict(self, model, cDF, features):
+    def predict(self, model, cDF, features,QoI):
         
         contourData = cDF.copy(deep=True)
         
@@ -304,13 +403,15 @@ class gaussianProcess:
             self.predictive_model = joblib.load(model)
             #print('Model loaded at prediction time')
         
+        contourData = self.yTransform(contourData,'direct',QoI)
         if self.normalization == 'log':
             warnings.filterwarnings("ignore")
             contourData['y_model'], contourData['y_std'] = self.predictive_model.predict(np.log(contourData[features]), return_std=True)
         elif self.normalization == 'normal':
             warnings.filterwarnings("ignore")
             contourData['y_model'], contourData['y_std'] = self.predictive_model.predict((contourData[features]-self.meanVal[features])/self.stdVal[features], return_std=True)
-                
+        contourData = self.yTransform(contourData,'inverse',QoI)
+        
         return contourData
         
 
@@ -338,6 +439,10 @@ class gaussianProcess:
         
         gpr = GaussianProcessRegressor(kernel=eval(expression),alpha = alpha, random_state=seed, normalize_y=True)
         
+        self.trainData = self.yTransform(self.trainData,'direct',QoI)
+        self.devData   = self.yTransform(self.devData,  'direct',QoI)
+        self.testData  = self.yTransform(self.testData, 'direct',QoI)
+        
         if self.normalization == 'log':
             gpr.fit(np.log(self.trainData[features].to_numpy()), self.trainData[[QoI]].to_numpy())
             y_dev, _  = gpr.predict(np.log(self.devData[features]), return_std=True)
@@ -347,7 +452,10 @@ class gaussianProcess:
             gpr.fit(((self.trainData[features]-self.meanVal[features])/self.stdVal[features]).to_numpy(), self.trainData[[QoI]].to_numpy())
             y_dev, _  = gpr.predict(((self.devData[features]-self.meanVal[features])/self.stdVal[features]).to_numpy(), return_std=True)
             y_test, _ = gpr.predict(((self.testData[features]-self.meanVal[features])/self.stdVal[features]).to_numpy(), return_std=True)
-            
+        
+        self.trainData = self.yTransform(self.trainData,'inverse',QoI)
+        self.devData   = self.yTransform(self.devData,  'inverse',QoI)
+        self.testData  = self.yTransform(self.testData, 'inverse',QoI)    
         
         dev_RMSE_relative  = np.linalg.norm((y_dev-self.devData[QoI].to_numpy())/self.devData[QoI].to_numpy())
         dev_RMSE  = np.linalg.norm(y_dev-self.devData[QoI].to_numpy())
@@ -429,7 +537,7 @@ class MyProblem(Problem):
         for QoI in self.targetVars:
         
             model = '../GPRModels/'+prefix+self.testPrefix+'_'+QoI+'.pkl'
-            y_mean = gp_model.predict(model,fit_features,self.features)
+            y_mean = gp_model.predict(model,fit_features,self.features,QoI)
             
             y_query, model_predictions = scale_predictions(y_mean, self.targetABL, alphaDiscrete, QoI)
             

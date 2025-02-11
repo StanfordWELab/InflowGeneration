@@ -16,7 +16,7 @@ PFDatabase = './GPRDatabase'
 #fNames = ['testABL']
 #fNames = ['TPU_ABL']
 fNames = ['themisABL']
-#fNames = ['inflowProfile_U10_Cat4_1uu1vv1ww']
+#fNames = ['inflowProfile_U10_Cat1_1uu1vv1ww']
 #fNames = ['inflowProfile_U10_Cat1_1uu1vv1ww','inflowProfile_U10_Cat2_1uu1vv1ww','inflowProfile_U10_Cat3_1uu1vv1ww','inflowProfile_U10_Cat4_1uu1vv1ww']
 #fNames = ['inflowProfile_Cat2_1uu1vv1ww','inflowProfile_Cat3_1uu1vv1ww']
 #fNames = ['TPU_highrise_14_middle_higher']
@@ -28,7 +28,6 @@ fNames = ['themisABL']
 #xList = [[0.3,0.6,0.9,1.2,1.5,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]]
 #alphaList = [0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
 #rList = [52,57,62,67,72,77,82,87,92]
-#weights={'u':0.25,'Iu':0.25,'Iv':0.25,'Iw':0.25}
 
 
 #### Define these variables for Optimize-NSGA ####
@@ -39,11 +38,12 @@ n_generations = 100
 
 
 ##### Define these variables for Plot-Gridsearch ####
-#hSearch = hList
-#xSearch = xList
-#alphaSearch = alphaList
-#rSearch = rList
+#hSearch = [0.08,0.12,0.16]
+#xSearch = [0.3, 0.9]
+#alphaSearch = [0.4,0.5]
+#rSearch = [52,72]
 #nResults = 4
+#weights={'u':0.25,'Iu':0.25,'Iv':0.25,'Iw':0.25}
 
 #### metric is 'RMSE' or 'RMSE relative'
 metric = 'RMSE'
@@ -135,7 +135,7 @@ for fName in fNames:
             else:
                 df = pd.concat([df, pd.DataFrame([dct])], ignore_index=True)
 
-        df.to_csv('TestCases/'+fName+'_optimal.csv',index=False,index_label=False)
+        df.to_csv('TestCases/'+fName+'_gridsearch.csv',index=False,index_label=False)
     
     elif mode =='Optimize-NSGA':
 
@@ -175,7 +175,7 @@ for fName in fNames:
 
     elif mode == 'Plot-Gridsearch':
 
-        df = pd.read_csv('TestCases/'+fName+'_optimal.csv')
+        df = pd.read_csv('TestCases/'+fName+'_gridsearch.csv')
         df['cost'] = 0
         for QoI in weights:
             df['cost'] += weights[QoI]*df[metric+' '+QoI]
@@ -183,91 +183,26 @@ for fName in fNames:
         optimum_setup = df.sort_values(by = 'cost', ascending = True)
         optimum_setup = (optimum_setup[optimum_setup['h'].isin(hSearch) & optimum_setup['x'].isin(xSearch) & optimum_setup['r'].isin(rSearch) & optimum_setup['alpha'].isin(alphaSearch)]).sort_values(by = 'cost', ascending = True)
         
-            
         print(optimum_setup.sort_values(by = 'cost', ascending = True).iloc[:10])
         
-        my_dpi = 100
-        plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
+        hParams     = []
+        rParams     = []
+        alphaParams = []
+        xParams     = []
+        
+        for i in range(nResults):
 
-        cont=1
-
-        for QoI in weights:
-            
-            for i in range(nResults):
-
-                xTemp = optimum_setup['x'].iloc[i]
-                hTemp = optimum_setup['h'].iloc[i]
-                rTemp = optimum_setup['r'].iloc[i]
-                alphaTemp = optimum_setup['alpha'].iloc[i]
-
-                fit_features = pd.DataFrame()
-                fit_features['y'] = np.linspace(0.01,1.0,2000)
-                fit_features['x'] = xTemp
-                fit_features['h'] = hTemp
-                fit_features['r'] = rTemp
-                fit_features['alpha'] = alphaTemp
-            
-                trainPoints = {'h':trainPairs[:,0],'r':trainPairs[:,1],'x':[xTemp]}
-                devPoints = {'h':devPairs[:,0],'r':devPairs[:,1],'x':[xTemp]}
-                testPoints = {'h':testPairs[:,0],'r':testPairs[:,1],'x':[xTemp]}
-
-                gp = gaussianProcess(trainPoints, devPoints, testPoints, yMax, PFDatabase)
-                
-                prefix = str(str(xTemp)+'_').replace('.','p')
-                directory = prefix+testID
-                model = '../GPRModels/'+directory+'_'+QoI+'.pkl'
-                
-                y_mean = gp.predict(model,fit_features,features)
-                y_mean = y_mean.loc[y_mean['y']<=alphaTemp*np.max(y_mean['y'])]
-                y_mean['y'] = y_mean['y']/(y_mean['y'].max())
-                
-                if QoI == 'u':
-                    y_mean['y_model'] = y_mean['y_model']/(y_mean['y_model'].iloc[-1])
-                    y_mean['y_std'] = y_mean['y_std']/(y_mean['y_model'].iloc[-1])
-                if len(weights) == 1:
-                    plt.subplot(1,1,cont)
-                elif len(weights) == 2:
-                    plt.subplot(1,2,cont)
-                else:
-                    plt.subplot(2,2,cont)
-                    
-                if i==0:
-                    plt.plot(ref_abl[QoI],ref_abl['y'],color='tab:red',label='Target',linewidth=3)
-                    plt.fill_betweenx(ref_abl['y'], ref_abl[QoI]*0.9, ref_abl[QoI]*1.1, color='tab:red', alpha=0.2,label=r'Reference $\pm$10%')
-                    
-                line = plt.plot(y_mean['y_model'],y_mean['y'],linestyle='--',linewidth=3
-                        ,label=str(i+1)+r': x='+'{0:.2f}'.format(xTemp)+'m,h='+'{0:.2f}'.format(hTemp)+'m'+r'm,$\alpha$='+'{0:.2f}'.format(alphaTemp)+r',r='+'{0:.2f}'.format(rTemp))
-                
-                max_x = np.ceil((1.2*max([np.max(ref_abl[QoI]),np.max(y_mean['y_model'])])*10000).astype(int))/10000
-                plt.xlim(0,1.2*max_x)
-                plt.xlabel(QoI)
-                
-                plt.ylim(0,1)
-                plt.yticks([0.5,1.0])
-                
-                if QoI=='u'or QoI == 'Iv':
-                    plt.ylabel('y/H')
-                else:
-                    plt.gca().set_yticklabels([])
-                
-                if uncertainty == True:
-                    plt.fill_betweenx(y_mean['y'], y_mean['y_model']-2*y_mean['y_std'], y_mean['y_model']+2*y_mean['y_std'], color=line[0].get_color(), alpha=0.2)
-                #plt.title(QoI +', Target vs model')
-                
-            cont +=1
-
-        plt.legend(frameon=False)
-
-        #plt.savefig('../RegressionPlots/'+fName+'_optimal.png', bbox_inches='tight')
-        plt.show()
-        plt.close('all')
+            xParams.append(optimum_setup['x'].iloc[i])
+            hParams.append(optimum_setup['h'].iloc[i])
+            rParams.append(optimum_setup['r'].iloc[i])
+            alphaParams.append(optimum_setup['alpha'].iloc[i])
+        
+        parameters = {r'$h$':hParams,r'$r$':rParams,r'$\alpha$':alphaParams,r'$x$':xParams}
+        
+        plotSetup(trainPairs, devPairs, testPairs, yMax, features, testID, PFDatabase, parameters, ref_abl, targetQoIs, uncertainty)
+        
 
     elif mode == 'Plot-Setup':
-        
-        my_dpi = 100
-        plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
-
-        cont=1
         
         stop = 'n'
         NSGA = ''
@@ -300,10 +235,12 @@ for fName in fNames:
                     print('Wrong format! You did not provide either a list or a list of integers. Try again\n')
             
             print('\n=================================\n')
-            print('Visualizing entries ' +str(listSolutions))
+            print('Visualizing entries:')
+            print(NSGA_results.iloc[listSolutions].to_string())
             print('\n=================================\n')
             
             parameters = NSGA_results.loc[listSolutions, [r'$h$', r'$r$', r'$\alpha$', r'$x$']].to_dict(orient='list')
+            parameters['idx'] = listSolutions
             
         else:
             hParams     = []
@@ -359,80 +296,11 @@ for fName in fNames:
                     escape = 'y'
                     
                         
-            parameters = {r'$h$':hParams,r'$r$':rParams,r'$\alpha$':alphaParams,r'$x$':xParams}
+            parameters = {r'$h$':hParams,r'$r$':rParams,r'$\alpha$':alphaParams,r'$x$':xParams,'idx':[None]*len(xParams)}
             
             print('\n=================================\n')
-            print('Visualizing setups ' +str(parameters))
+            print('Visualizing setups')
             print('\n=================================\n')
 
-        for QoI in ['u','Iu','Iv','Iw']:
-            
-            for i in range(len(parameters[r'$h$'])):
-
-                xTemp = parameters[r'$x$'][i]
-                hTemp = parameters[r'$h$'][i]
-                rTemp = parameters[r'$r$'][i]
-                alphaTemp = parameters[r'$\alpha$'][i]
-
-                fit_features = pd.DataFrame()
-                fit_features['y'] = np.linspace(0.01,1.0,2000)
-                fit_features['x'] = xTemp
-                fit_features['h'] = hTemp
-                fit_features['r'] = rTemp
-                fit_features['alpha'] = alphaTemp
-            
-                trainPoints = {'h':trainPairs[:,0],'r':trainPairs[:,1],'x':[xTemp]}
-                devPoints = {'h':devPairs[:,0],'r':devPairs[:,1],'x':[xTemp]}
-                testPoints = {'h':testPairs[:,0],'r':testPairs[:,1],'x':[xTemp]}
-
-                gp = gaussianProcess(trainPoints, devPoints, testPoints, yMax, PFDatabase)
-                
-                prefix = str(str(xTemp)+'_').replace('.','p')
-                directory = prefix+testID
-                model = '../GPRModels/'+directory+'_'+QoI+'.pkl'
-                
-                y_mean = gp.predict(model,fit_features,features)
-                y_mean = y_mean.loc[y_mean['y']<=alphaTemp*np.max(y_mean['y'])]
-                y_mean['y'] = y_mean['y']/(y_mean['y'].max())
-                
-                if QoI == 'u':
-                    y_mean['y_model'] = y_mean['y_model']/(y_mean['y_model'].iloc[-1])
-                    y_mean['y_std'] = y_mean['y_std']/(y_mean['y_model'].iloc[-1])
-                    
-                plt.subplot(2,2,cont)
-                
-                if i==0 and (QoI in header):
-                    plt.plot(ref_abl[QoI],ref_abl['y'],color='tab:red',label='Target',linewidth=3)
-                    plt.fill_betweenx(ref_abl['y'], ref_abl[QoI]*0.9, ref_abl[QoI]*1.1, color='tab:red', alpha=0.2,label=r'Reference $\pm$10%')
-                    
-                line = plt.plot(y_mean['y_model'],y_mean['y'],linestyle='--',linewidth=3
-                        ,label=str(i+1)+r': x='+'{0:.2f}'.format(xTemp)+'m,h='+'{0:.2f}'.format(hTemp)+'m'+r'm,$\alpha$='+'{0:.2f}'.format(alphaTemp)+r',r='+'{0:.2f}'.format(rTemp))
-                
-                if QoI in header:
-                    max_x = np.ceil((1.2*max([np.max(ref_abl[QoI]),np.max(y_mean['y_model'])])*10000).astype(int))/10000
-                else:
-                    max_x = np.ceil(1.2*np.max(y_mean['y_model'])*10000).astype(int)/10000
-                
-                plt.xlim(0,1.2*max_x)
-                plt.xlabel(QoI)
-                
-                plt.ylim(0,1)
-                plt.yticks([0.5,1.0])
-                
-                if QoI=='u'or QoI == 'Iv':
-                    plt.ylabel('y/H')
-                else:
-                    plt.gca().set_yticklabels([])
-                
-                if uncertainty == True:
-                    plt.fill_betweenx(y_mean['y'], y_mean['y_model']-2*y_mean['y_std'], y_mean['y_model']+2*y_mean['y_std'], color=line[0].get_color(), alpha=0.2)
-                
-            cont +=1
-
-        plt.legend(frameon=False)
-
-        plt.savefig('../RegressionPlots/'+fName+'_test.png', bbox_inches='tight')
-        plt.show()
-        plt.close('all')
-
+        plotSetup(trainPairs, devPairs, testPairs, yMax, features, testID, PFDatabase, parameters, ref_abl, targetQoIs, uncertainty)
 
