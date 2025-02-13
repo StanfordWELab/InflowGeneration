@@ -35,18 +35,18 @@ nCpu = 1
 # stresses_normalized
 hTrain = [0.04,0.08,0.12,0.16]
 rTrain = [52,62,72,82,92]
-testID = 'inflow_stresses'
+testID = 'intensities'
 
 devPairs = np.array([[0.06,57],[0.06,87],[0.14,67],[0.14,77]])
 testPairs = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
 
-QoIs = ['u','uu','vv','ww']
+QoIs = ['u']
 #QoIs = ['u','Iu','Iv','Iw']
 #QoIs = ['Iuv']
 
 PFDatabase = './GPRDatabase/'
 
-setToPlot = 'Test'
+setToPlot = 'Dev'
 
 
 ###########################################################
@@ -63,9 +63,9 @@ for h in hTrain:
 
 features = ['y','h','r']
 
-yMax= 1.5
-
 if mode == 'Gridsearch':
+
+    yMax= 1.0
 
     for x in xModels:
         
@@ -132,6 +132,8 @@ elif mode == 'Inflow':
 
 elif mode == 'Plot':
 
+    yMax= 1.0
+
     for x in xModels:
 
         my_dpi = 100
@@ -157,7 +159,7 @@ elif mode == 'Plot':
                 h=trainPairs[i,0]
                 r=trainPairs[i,1]
                 
-                trainData = loadData([h], [x], [r], yMax, PFDatabase, np.linspace(0.01,1.0,100))
+                trainData = loadData([h], [x], [r], yMax, PFDatabase, 15.0, np.linspace(0.01,1.0,100))
                 
                 prefix = str(str(x)+'_').replace('.','p')
                 directory = prefix+testID
@@ -182,7 +184,7 @@ elif mode == 'Plot':
                 h=withheld[i,0]
                 r=withheld[i,1]
                 
-                withheldData = loadData([h], [x], [r], yMax, PFDatabase, np.linspace(0.01,1.0,100))
+                withheldData = loadData([h], [x], [r], yMax, PFDatabase, 15.0, np.linspace(0.01,1.0,100))
                 
                 prefix = str(str(x)+'_').replace('.','p')
                 directory = prefix+testID+'_'+QoI

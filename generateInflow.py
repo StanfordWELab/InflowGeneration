@@ -16,7 +16,19 @@ intensitiesModelID = 'intensities'
 inflowModelID = 'inflow_stresses'
 uncertainty = True
 
-###########################################################
+hMatch_adimensional = 0.5
+
+Uscaling = 15.17
+
+########################################################
+
+h = 0.06
+r = 87
+alpha = 0.40
+k = 1.03
+x = 0.9
+
+features = ['y','h','r']
 
 xList = [0.3,0.6,0.9,1.2,1.5,1.8,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]
 
@@ -26,23 +38,16 @@ rTrain = [52,62,72,82,92]
 devPairs = np.array([[0.06,57],[0.06,87],[0.14,67],[0.14,77]])
 testPairs = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
 
-QoIs = ['u','Iu','Iv','Iw']
-
 trainPairs = np.zeros((len(hTrain)*len(rTrain),2))
 cont=0
-for h in hTrain:
-    for r in rTrain:
-        trainPairs[cont,:] = [h, r]
+for hTemp in hTrain:
+    for rTemp in rTrain:
+        trainPairs[cont,:] = [hTemp, rTemp]
         cont+=1
 
-features = ['y','h','r']
+QoIs = ['u','Iu','Iv','Iw']
 
 yMax= 1.0
-
-h = 0.06
-r = 87
-alpha = 0.30
-x = 0.9
 
 #escape = 't'
 #while not(escape == 'y'):
@@ -94,21 +99,25 @@ ref_abl = pd.read_csv('TestCases/'+fName+'.dat',sep=',')
 header = list(ref_abl.columns)
 idx = np.argmax(ref_abl['y'].to_numpy())
 
-Uref = 1.0*ref_abl['u'].iloc[idx]
 yref = ref_abl['y'].iloc[idx]*1.0
 
 ref_abl['y'] = ref_abl['y']/yref
 ref_abl['u'] = ref_abl['u']
-for rsc in ['uu','vv','ww','uv','uw','vw']:
-    if rsc in header:
-        ref_abl[rsc] = ref_abl[rsc]/(Uref**2)
   
 model = '../GPRModels/'+directory+'_u.pkl'
 y_mean = gp.predict(model,fit_features,features,'u')
 y_mean = y_mean.loc[y_mean['y']<=alpha*np.max(y_mean['y'])]
 y_mean['y'] = y_mean['y']/(y_mean['y'].max())
-y_mean['y_model'] = y_mean['y_model']/(y_mean['y_model'].iloc[-1])
-Uscaling = (interp1d(y_mean['y'], y_mean['y_model']*Uref)(1.0)).item()
+y_mean['y_model'] = y_mean['y_model']
+
+U_ABL_dim = (interp1d(ref_abl['y'], ref_abl['u'])(hMatch_adimensional)).item()
+U_TIG_dim = (interp1d(y_mean['y'], y_mean['y_model'])(hMatch_adimensional)).item()*14.9457
+
+Uscaling = U_ABL_dim/U_TIG_dim
+print(Uscaling)
+##print(y_mean)
+##print(ref_abl)
+input()
         
 my_dpi = 100
 plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
@@ -122,9 +131,8 @@ for QoI in ['u','Iu','Iv','Iw']:
     y_mean['y'] = y_mean['y']/(y_mean['y'].max())
     
     if QoI == 'u':
-        y_mean['y_model'] = y_mean['y_model']/(y_mean['y_model'].iloc[-1])
-        y_mean['y_model'] = y_mean['y_model']*Uscaling
-        y_mean['y_std'] = y_mean['y_std']/(y_mean['y_model'].iloc[-1])*Uscaling
+        y_mean['y_model'] = y_mean['y_model']*Uscaling*14.9457
+        y_mean['y_std'] = y_mean['y_std']*Uscaling*14.9457
         
     plt.subplot(2,4,cont)
     
@@ -161,9 +169,8 @@ for QoI in ['u','Iu','Iv','Iw']:
     y_mean['y'] = y_mean['y']/(y_mean['y'].max())
     
     if QoI == 'u':
-        y_mean['y_model'] = y_mean['y_model']/(y_mean['y_model'].iloc[-1])
         y_mean['y_model'] = y_mean['y_model']*Uscaling
-        y_mean['y_std'] = y_mean['y_std']/(y_mean['y_model'].iloc[-1])*Uscaling
+        y_mean['y_std'] = y_mean['y_std']*Uscaling
     
     if (QoI in header):
         plt.plot(ref_abl[QoI],ref_abl['y']*yref,color='tab:red',label='Target',linewidth=3)
@@ -204,6 +211,12 @@ plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
 
 for x in [-4.95,-2.85]:
     cont=1
+                
+    trainPoints = {'h':trainPairs[:,0],'r':trainPairs[:,1],'x':[x]}
+    devPoints = {'h':devPairs[:,0],'r':devPairs[:,1],'x':[x]}
+    testPoints = {'h':testPairs[:,0],'r':testPairs[:,1],'x':[x]}
+        
+    gp = gaussianProcess(trainPoints, devPoints, testPoints, yMax, PFDatabase, np.linspace(0.01,1.0,100))
 
     outputDF = pd.DataFrame()
     fit_features = pd.DataFrame()
@@ -221,12 +234,6 @@ for x in [-4.95,-2.85]:
     outputDF['uw-reynolds-stress'] = np.zeros((len(fit_features['y'].to_numpy()),))
     outputDF['vw-reynolds-stress'] = np.zeros((len(fit_features['y'].to_numpy()),))
 
-    trainPoints = {'h':trainPairs[:,0],'r':trainPairs[:,1],'x':[x]}
-    devPoints = {'h':devPairs[:,0],'r':devPairs[:,1],'x':[x]}
-    testPoints = {'h':testPairs[:,0],'r':testPairs[:,1],'x':[x]}
-
-    gp = gaussianProcess(trainPoints, devPoints, testPoints, yMax, PFDatabase)
-
     for QoI in ['u','uu','vv','ww','uv']:
         
         prefix = str(str(x)+'_').replace('.','p')
@@ -234,14 +241,14 @@ for x in [-4.95,-2.85]:
         model = '../GPRModels/'+directory+'_'+QoI+'.pkl'
         
         y_mean = gp.predict(model,fit_features,features,QoI)
-        y_mean['y'] = y_mean['y']/(y_mean['y'].max())*yMax
+        y_mean['y'] = y_mean['y']/(y_mean['y'].max())
         
         if QoI == 'u':
-            y_mean['y_model'] = y_mean['y_model']/(y_mean['y_model'].iloc[-1])*Uscaling
-            y_mean['y_std'] = y_mean['y_std']/(y_mean['y_model'].iloc[-1])*Uscaling
+            y_mean['y_model'] = y_mean['y_model']/(y_mean['y_model'].iloc[-1])*Uscaling*14.9457
+            y_mean['y_std'] = y_mean['y_std']/(y_mean['y_model'].iloc[-1])*Uscaling*14.9457
         else:
-            y_mean['y_model'] = y_mean['y_model']*(Uscaling**2)
-            y_mean['y_std'] = y_mean['y_std']*(Uscaling**2)
+            y_mean['y_model'] = y_mean['y_model']*Uscaling*Uscaling*14.9457
+            y_mean['y_std'] = y_mean['y_std']*Uscaling*Uscaling*14.9457
             
         plt.subplot(2,3,cont)
         
@@ -264,7 +271,7 @@ for x in [-4.95,-2.85]:
             line = plt.plot(outputDF['ww-reynolds-stress'],outputDF['y'],linewidth=2,label=lab)
         elif QoI == 'uv':
             outputDF['uv-reynolds-stress'] = -np.abs(y_mean['y_model'].to_numpy())
-            line = plt.plot(outputDF['uv-reynolds-stress'],outputDF['y'],linewidth=2,label=lab)
+            line = plt.plot(-outputDF['uv-reynolds-stress'],outputDF['y'],linewidth=2,label=lab)
         
         max_x = np.ceil(1.2*np.max(y_mean['y_model'])*10000).astype(int)/10000
         
@@ -281,14 +288,117 @@ for x in [-4.95,-2.85]:
             #plt.fill_betweenx(y_mean['y'], y_mean['y_model']-2*y_mean['y_std'], y_mean['y_model']+2*y_mean['y_std'], color=line[0].get_color(), alpha=0.2)
         
         cont +=1
-
-    #outputDF[['x','y','z','x-velocity','y-velocity','z-velocity','uu-reynolds-stress','vv-reynolds-stress','ww-reynolds-stress','uv-reynolds-stress','uw-reynolds-stress','vw-reynolds-stress']].to_csv('TestCases/'+fName+'_'+lab+'.txt',sep='\t',index=False)
+    
+    outputDF['y'] = outputDF['y']*100
+    outputDF[['x','y','z','x-velocity','y-velocity','z-velocity','uu-reynolds-stress','vv-reynolds-stress','ww-reynolds-stress','uv-reynolds-stress','uw-reynolds-stress','vw-reynolds-stress']].to_csv('TestCases/'+fName+'_'+lab+'.txt',sep='\t',index=False)
 
 plt.suptitle('Chosen setup')
 plt.legend(frameon=False)
 plt.show()
 plt.close('all')
             
+
+
+##h = 0.06
+##r = 87
+##alpha = 0.40
+##x = 0.9
+
+##yMax = 1.5
+        
+##my_dpi = 100
+##plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
+
+##for x in [-4.95,-2.85]:
+    ##cont=1
+                
+    ##trainPoints = {'h':trainPairs[:,0],'r':trainPairs[:,1],'x':[x]}
+    ##devPoints = {'h':devPairs[:,0],'r':devPairs[:,1],'x':[x]}
+    ##testPoints = {'h':testPairs[:,0],'r':testPairs[:,1],'x':[x]}
+        
+    ##gp = gaussianProcess(trainPoints, devPoints, testPoints, yMax, PFDatabase, np.linspace(0.01,1.0,100))
+
+    ##outputDF = pd.DataFrame()
+    ##fit_features = pd.DataFrame()
+
+    ##trainData = loadData([h], [x], [r], yMax, PFDatabase, np.linspace(0.01,1.0,100))
+        
+    ##outputDF['x'] = np.ones((len(trainData['y'].to_numpy()),))*x
+    ##outputDF['y'] = trainData['y'].to_numpy()*yMax
+    ##outputDF['z'] = np.zeros((len(trainData['y'].to_numpy()),))
+    ##outputDF['y-velocity'] = np.zeros((len(trainData['y'].to_numpy()),))
+    ##outputDF['z-velocity'] = np.zeros((len(trainData['y'].to_numpy()),))
+    ##outputDF['uw-reynolds-stress'] = np.zeros((len(trainData['y'].to_numpy()),))
+    ##outputDF['vw-reynolds-stress'] = np.zeros((len(trainData['y'].to_numpy()),))
+
+    ##for QoI in ['u','uu','vv','ww','uv']:
+        
+        ##prefix = str(str(x)+'_').replace('.','p')
+        ##directory = prefix+inflowModelID
+        ##model = '../GPRModels/'+directory+'_'+QoI+'.pkl'
+        
+        ##y_mean = gp.predict(model,trainData,features,QoI)
+        ##y_mean['y'] = y_mean['y']/(y_mean['y'].max())
+        
+        ###if QoI == 'u':
+            ###y_mean['y_model'] = y_mean['y_model']/(y_mean['y_model'].iloc[-1])*Uscaling*15.17/17.10
+            ###y_mean['y_std'] = y_mean['y_std']/(y_mean['y_model'].iloc[-1])*Uscaling*15.17/17.10
+        ###else:
+            ###y_mean['y_model'] = y_mean['y_model']*((Uscaling*15.17/17.10)**2)
+            ###y_mean['y_std'] = y_mean['y_std']*((Uscaling*15.17/17.10)**2)
+        
+        ##if QoI == 'u':
+            ##y_mean['y_model'] = y_mean['y_model']/(y_mean['y_model'].iloc[-1])*Uscaling
+            ##y_mean['y_std'] = y_mean['y_std']/(y_mean['y_model'].iloc[-1])*Uscaling
+        ##else:
+            ##y_mean['y_model'] = y_mean['y_model']*Uscaling*Uscaling
+            ##y_mean['y_std'] = y_mean['y_std']*Uscaling*Uscaling
+            
+        ##plt.subplot(2,3,cont)
+        
+        ##if x == -4.95:
+            ##lab = 'inflow_input'
+        ##elif x == -2.85:
+            ##lab = 'ALF_input'
+            
+        ##if QoI == 'u':
+            ##outputDF['x-velocity'] = y_mean['y_model'].to_numpy()
+            ##line = plt.plot(outputDF['x-velocity'],outputDF['y'],linewidth=2,label=lab)
+        ##elif QoI == 'uu':
+            ##outputDF['uu-reynolds-stress'] = np.abs(y_mean['y_model'].to_numpy())
+            ##line = plt.plot(outputDF['uu-reynolds-stress'],outputDF['y'],linewidth=2,label=lab)
+        ##elif QoI == 'vv':
+            ##outputDF['vv-reynolds-stress'] = np.abs(y_mean['y_model'].to_numpy())
+            ##line = plt.plot(outputDF['vv-reynolds-stress'],outputDF['y'],linewidth=2,label=lab)
+        ##elif QoI == 'ww':
+            ##outputDF['ww-reynolds-stress'] = np.abs(y_mean['y_model'].to_numpy())
+            ##line = plt.plot(outputDF['ww-reynolds-stress'],outputDF['y'],linewidth=2,label=lab)
+        ##elif QoI == 'uv':
+            ##outputDF['uv-reynolds-stress'] = -np.abs(y_mean['y_model'].to_numpy())
+            ##line = plt.plot(outputDF['uv-reynolds-stress'],outputDF['y'],linewidth=2,label=lab)
+        
+        ##max_x = np.ceil(1.2*np.max(y_mean['y_model'])*10000).astype(int)/10000
+        
+        ##plt.xlim(0,1.1*max_x)
+        
+        ##if QoI=='u':
+            ##plt.ylabel('y[m]')
+            ##plt.xlabel('u[m/s]')
+        ##else:
+            ##plt.ylabel('y[m]')
+            ##plt.xlabel(QoI+r'$[m^2/s^2]$')
+        
+        ###if uncertainty == True:
+            ###plt.fill_betweenx(y_mean['y'], y_mean['y_model']-2*y_mean['y_std'], y_mean['y_model']+2*y_mean['y_std'], color=line[0].get_color(), alpha=0.2)
+        
+        ##cont +=1
+
+    ##outputDF[['x','y','z','x-velocity','y-velocity','z-velocity','uu-reynolds-stress','vv-reynolds-stress','ww-reynolds-stress','uv-reynolds-stress','uw-reynolds-stress','vw-reynolds-stress']].to_csv('TestCases/'+fName+'_'+lab+'.txt',sep='\t',index=False)
+
+##plt.suptitle('Chosen setup')
+##plt.legend(frameon=False)
+##plt.show()
+##plt.close('all')
             
             
             

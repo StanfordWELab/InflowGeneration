@@ -8,7 +8,51 @@ from modelDefinition import *
 
 font={'size'   : 15}
 matplotlib.rc('font', **font)
+
+
+def filterSolutions(df):
+            
+    loop = input('Would you like to filter solutions?(y/n)\n')
     
+    if loop == 'n':
+        return df
+    
+    while loop == 'y':
+        
+        listSolutions = input('Write the RMSE upper limits for u, Iu, Iv, and Iw separated by spaces\n')
+        
+        try:
+            listSolutions = list(map(float, listSolutions.split()))
+            
+        except:
+            listSolutions = [None]
+            print('You need to specify float numbers!\n')
+                    
+        if len(listSolutions) == 4:
+            uRMSE  = listSolutions[0]
+            IuRMSE = listSolutions[1]
+            IvRMSE = listSolutions[2]
+            IwRMSE = listSolutions[3]
+            
+            if uRMSE<0 or IuRMSE<0 or IvRMSE<0 or IwRMSE<0:
+                print('You inserted a negative value for the RMSE, which does not make sense. Try again!\n')
+            else:
+                filteredDF = df.loc[df['u'] <= uRMSE]
+                filteredDF = filteredDF.loc[filteredDF['Iu']<=IuRMSE]
+                filteredDF = filteredDF.loc[filteredDF['Iv']<=IvRMSE]
+                filteredDF = filteredDF.loc[filteredDF['Iw']<=IwRMSE]
+                    
+                if filteredDF.empty:
+                    print('No available solution satisfy your critera. Try again!\n')
+            
+                else:
+                    loop = 'over'
+
+        else:
+            print('You need to specify four numbers! To avoid filtering one columns just specify a very large number\n')
+
+    return filteredDF
+
 ###############################################################################################
 
 PFDatabase = './GPRDatabase'
@@ -20,7 +64,7 @@ fNames = ['themisABL']
 #fNames = ['inflowProfile_U10_Cat1_1uu1vv1ww','inflowProfile_U10_Cat2_1uu1vv1ww','inflowProfile_U10_Cat3_1uu1vv1ww','inflowProfile_U10_Cat4_1uu1vv1ww']
 #fNames = ['inflowProfile_Cat2_1uu1vv1ww','inflowProfile_Cat3_1uu1vv1ww']
 #fNames = ['TPU_highrise_14_middle_higher']
-#fNames = ['TPU_highrise_14_middle']
+#fNames = ['TPU_highrise_14_middle_k']
 
 
 ##### Define these variables for Optimize-Gridsearch ####
@@ -32,8 +76,8 @@ fNames = ['themisABL']
 
 #### Define these variables for Optimize-NSGA ####
 xList = [0.3,0.6,0.9,1.2,1.5,1.8,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]
-variables = {r'$h$':[0.035,0.1649],r'$r$':[51.5,92.49],r'$\alpha$':[0.3,0.5],r'$x$':[-0.49,len(xList)-0.51]}
-population_size = 96
+variables = {r'$h$':[0.035,0.1649],r'$r$':[51.5,92.49],r'$\alpha$':[0.2,0.5],r'$k$':[0.3,3.0],r'$x$':[-0.49,len(xList)-0.51]}
+population_size = 64
 n_generations = 100
 
 
@@ -47,7 +91,7 @@ n_generations = 100
 
 #### metric is 'RMSE' or 'RMSE relative'
 metric = 'RMSE'
-uncertainty = True
+uncertainty = False
 testID = 'intensities'
 nCpu = 12
 
@@ -58,7 +102,7 @@ targetQoIs = ['u','Iu','Iv','Iw']
 options = ['Optimize-Gridsearch','Optimize-NSGA','Plot-Gridsearch','Plot-NSGA','Plot-Setup']
 everyQoI = ['u','Iu','Iv','Iw']
 features = ['y','h','r']
-varNames = [r'$h$',r'$r$',r'$\alpha$',r'$x$']
+varNames = [r'$h$',r'$r$',r'$\alpha$',r'$k$',r'$x$']
 
 yMax= 1.0
 
@@ -141,8 +185,8 @@ for fName in fNames:
 
         algorithm = NSGA2(pop_size=population_size)
 
-        problemUser = MyProblem(variables,trainPairs,devPairs,testPairs,yMax,xList,ref_abl,features,effectiveQoIs,PFDatabase,testID)
-        resUser = minimize(problemUser, algorithm, ('n_gen', n_generations), seed=1, verbose=False)
+        problemUser = MyProblem(variables,trainPairs,devPairs,testPairs,yMax,xList,ref_abl,features,effectiveQoIs,PFDatabase,testID,nCpu)
+        resUser = minimize(problemUser, algorithm, ('n_gen', n_generations), seed=1, verbose=True)
 
         # Save Pareto front (Objective values) to CSV
         df_obj = pd.DataFrame(resUser.F, columns=[effectiveQoIs[i] for i in range(resUser.F.shape[1])])
@@ -164,14 +208,22 @@ for fName in fNames:
         NSGA_results['$h$'] = ((NSGA_results['$h$']*100).round().astype(int)/100).to_numpy()
         NSGA_results['$r$'] = NSGA_results['$r$'].round().astype(int).to_numpy()
         NSGA_results[r'$\alpha$'] = NSGA_results[r'$\alpha$'].round(2).astype(float).to_numpy()
+        NSGA_results[r'$k$'] = NSGA_results[r'$k$'].round(2).astype(float).to_numpy()
         NSGA_results = NSGA_results.drop_duplicates(subset=varNames, keep='first').reset_index(drop=True)
+        
         print(NSGA_results.to_string())
+        NSGA_results = filterSolutions(NSGA_results)
+        print('===================================================================')
+        print('=========== Plotting results of the following dataframe ===========')
+        print('===================================================================')
+        print(NSGA_results.to_string())
+        indices = NSGA_results.index.tolist()
         
         resUser = Result()
         resUser.F = NSGA_results[effectiveQoIs].to_numpy()   # Pareto front
         resUser.X = NSGA_results[varNames].to_numpy()  # Decision variables
 
-        parallelCoordinatesPlot(resUser, xList, varNames, effectiveQoIs)
+        parallelCoordinatesPlot(resUser, xList, varNames, effectiveQoIs, indices)
 
     elif mode == 'Plot-Gridsearch':
 
@@ -216,10 +268,11 @@ for fName in fNames:
             decisionVars  = pd.read_csv('TestCases/'+fName+"_decision_variables.csv")
             
             NSGA_results = pd.concat([RMSEValues, decisionVars], axis=1).sort_values(by='u', ascending=False)
-            NSGA_results['$x$'] = [xList[x] for x in NSGA_results['$x$'].round().astype(int).to_numpy()]
             NSGA_results['$h$'] = ((NSGA_results['$h$']*100).round().astype(int)/100).to_numpy()
             NSGA_results['$r$'] = NSGA_results['$r$'].round().astype(int).to_numpy()
             NSGA_results[r'$\alpha$'] = NSGA_results[r'$\alpha$'].round(2).astype(float).to_numpy()
+            NSGA_results[r'$k$'] = NSGA_results[r'$k$'].round(2).astype(float).to_numpy()
+            NSGA_results['$x$'] = [xList[x] for x in NSGA_results['$x$'].round().astype(int).to_numpy()]
             NSGA_results = NSGA_results.drop_duplicates(subset=varNames, keep='first').reset_index(drop=True)
             print(NSGA_results.to_string())
             
@@ -239,7 +292,7 @@ for fName in fNames:
             print(NSGA_results.iloc[listSolutions].to_string())
             print('\n=================================\n')
             
-            parameters = NSGA_results.loc[listSolutions, [r'$h$', r'$r$', r'$\alpha$', r'$x$']].to_dict(orient='list')
+            parameters = NSGA_results.loc[listSolutions, [r'$h$', r'$r$', r'$\alpha$', r'$k$', r'$x$']].to_dict(orient='list')
             parameters['idx'] = listSolutions
             
         else:

@@ -2,6 +2,7 @@ import random
 import joblib
 import numpy as np
 import pandas as pd
+import copy as cp
 import warnings
 
 from matplotlib import pyplot as plt
@@ -16,7 +17,7 @@ from pymoo.optimize import minimize
 from pymoo.core.result import Result
 from pymoo.core.problem import Problem
 
-def loadData(heights, location, roughness, yMax, home='./GPRDatabase', yInterp=False):
+def loadData(heights, location, roughness, yMax, home='./GPRDatabase', reference_velocity = False, yInterp=False):
     ymin = 0.005
     u=15
     data = pd.DataFrame()
@@ -55,7 +56,10 @@ def loadData(heights, location, roughness, yMax, home='./GPRDatabase', yInterp=F
             temp['h'] = filtered_df['h'].round(2).astype(float)
             temp['r'] = filtered_df['r'].astype(int)
             
-            U_yMax_interp = (interp1d(interp_df['y'], interp_df['x-velocity'])(yMax)).item()
+            if reference_velocity == False:
+                U_yMax_interp = (interp1d(interp_df['y'], interp_df['x-velocity'])(yMax)).item()
+            else:
+                U_yMax_interp = reference_velocity*1.0
             
             temp['u'] = temp['u']/U_yMax_interp
             temp['uu'] = temp['uu']/(U_yMax_interp**2)
@@ -63,7 +67,7 @@ def loadData(heights, location, roughness, yMax, home='./GPRDatabase', yInterp=F
             temp['vv'] = temp['vv']/(U_yMax_interp**2)
             temp['ww'] = temp['ww']/(U_yMax_interp**2)
             
-            lastRow={'x':filtered_df['x'].iloc[0], 'y':yMax/yMax, 'u':U_yMax_interp/U_yMax_interp, 'h':filtered_df['h'].iloc[0],'r':filtered_df['r'].iloc[0]
+            lastRow={'x':filtered_df['x'].iloc[0], 'y':yMax/yMax, 'u':(interp1d(interp_df['y'], interp_df['x-velocity'])(yMax)).item()/U_yMax_interp, 'h':filtered_df['h'].iloc[0],'r':filtered_df['r'].iloc[0]
                    , 'Iu':(interp1d(interp_df['y'], np.sqrt(interp_df['uu-reynolds-stress'])/interp_df['x-velocity-magnitude']))(yMax).item()
                    , 'Iv':(interp1d(interp_df['y'], np.sqrt(interp_df['vv-reynolds-stress'])/interp_df['x-velocity-magnitude']))(yMax).item()
                    , 'Iw':(interp1d(interp_df['y'], np.sqrt(interp_df['ww-reynolds-stress'])/interp_df['x-velocity-magnitude']))(yMax).item()
@@ -145,7 +149,7 @@ def scale_predictions(model_profile, target_profile, alpha, QoI):
     
     return  yQuery, QoIQuery
         
-def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs):
+def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs, indices):
 
     xPlot = np.linspace(0,1,len(QoIs))
 
@@ -155,9 +159,9 @@ def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs):
     if len(pyMooResults.X) == 2:
         cont0 = 211
     else:
-        cont0 = 221
+        cont0 = 231
         
-    paramNames =[r'$h$',r'$r$',r'$\alpha$',r'$x$']
+    paramNames =[r'$h$',r'$r$',r'$\alpha$',r'$k$',r'$x$']
 
     my_dpi = 100
     plt.figure(figsize=(2200/my_dpi, 1200/my_dpi), dpi=my_dpi)
@@ -177,6 +181,9 @@ def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs):
         if paramNames[cont] == r'$\alpha$':
             vmin, vmax = [0.05, 1.05]
             cm = plt.cm.tab20
+        if paramNames[cont] == r'$k$':
+            vmin, vmax = [0.85, 1.15]
+            cm = plt.cm.hsv
         if paramNames[cont] == r'$x$':
             param = [xValues.index(p) for p in param]
             vmin, vmax = [-0.5,19.5]
@@ -193,7 +200,7 @@ def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs):
             plt.plot(xPlot,yVal,color=cm(norm(param[idx])))
             
             if idx%5 == 0:
-                plt.text(-0.01, yVal[0], str(idx), fontsize=10, ha='right', va='center')
+                plt.text(-0.01, yVal[0], str(indices[idx]), fontsize=10, ha='right', va='center')
             
             idx+=1
         
@@ -208,8 +215,6 @@ def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs):
         
         if paramNames[cont] == r'$h$':
             cbar.set_ticks(np.linspace(0.04,0.18,15))
-        #if paramNames[cont] == r'$r$':
-            #cbar.set_ticks([52,57,62,67,72,77,82,87,92])
         if paramNames[cont] == r'$\alpha$':
             cbar.set_ticks(np.linspace(0.1,1.0,10))
         if paramNames[cont] == r'$x$':
@@ -222,7 +227,7 @@ def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs):
     plt.show()
     
 def plotSetup(trainPairs, devPairs, testPairs, yMax, features, testID, PFDatabase, parameters, ref_abl, QoIs, uncertainty):
-        
+    
     header = list(ref_abl.columns)
     
     my_dpi = 100
@@ -234,17 +239,19 @@ def plotSetup(trainPairs, devPairs, testPairs, yMax, features, testID, PFDatabas
         
         for i in range(len(parameters[r'$h$'])):
 
-            xTemp = parameters[r'$x$'][i]
             hTemp = parameters[r'$h$'][i]
             rTemp = parameters[r'$r$'][i]
             alphaTemp = parameters[r'$\alpha$'][i]
+            kTemp = parameters[r'$k$'][i]
+            xTemp = parameters[r'$x$'][i]
 
             fit_features = pd.DataFrame()
             fit_features['y'] = np.linspace(0.01,1.0,2000)
-            fit_features['x'] = xTemp
             fit_features['h'] = hTemp
             fit_features['r'] = rTemp
             fit_features['alpha'] = alphaTemp
+            fit_features['k'] = kTemp
+            fit_features['x'] = xTemp
         
             trainPoints = {'h':trainPairs[:,0],'r':trainPairs[:,1],'x':[xTemp]}
             devPoints = {'h':devPairs[:,0],'r':devPairs[:,1],'x':[xTemp]}
@@ -261,8 +268,8 @@ def plotSetup(trainPairs, devPairs, testPairs, yMax, features, testID, PFDatabas
             y_mean['y'] = y_mean['y']/(y_mean['y'].max())
             
             if QoI == 'u':
-                y_mean['y_model'] = y_mean['y_model']/(y_mean['y_model'].iloc[-1])
-                y_mean['y_std'] = y_mean['y_std']/(y_mean['y_model'].iloc[-1])
+                y_mean['y_model'] = y_mean['y_model']/(y_mean['y_model'].iloc[-1])*fit_features['k']
+                y_mean['y_std'] = y_mean['y_std']/(y_mean['y_model'].iloc[-1])*fit_features['k']
                 
             plt.subplot(2,2,cont)
             
@@ -359,9 +366,9 @@ class gaussianProcess:
         
         self.yMax = yMax
         
-        self.trainData = loadData(trainPoints['h'], trainPoints['x'], trainPoints['r'], self.yMax, homeDirectory, yInterp)
-        self.devData  = loadData(devPoints['h'], devPoints['x'], devPoints['r'], self.yMax, homeDirectory, yInterp)
-        self.testData = loadData(testPoints['h'], testPoints['x'], testPoints['r'], self.yMax, homeDirectory, yInterp)
+        self.trainData = loadData(trainPoints['h'], trainPoints['x'], trainPoints['r'], self.yMax, homeDirectory, 15.0, yInterp)
+        self.devData  = loadData(devPoints['h'], devPoints['x'], devPoints['r'], self.yMax, homeDirectory, 15.0, yInterp)
+        self.testData = loadData(testPoints['h'], testPoints['x'], testPoints['r'], self.yMax, homeDirectory, 15.0, yInterp)
         
         self.meanVal = self.trainData.mean()
         self.stdVal  = self.trainData.std()
@@ -391,28 +398,28 @@ class gaussianProcess:
     
     def loadModel(self,model):
         
-        self.model_loaded = True
         self.predictive_model = joblib.load(model)
-        print('Model loaded preemptively')
+        self.model_loaded = True
+        print('Preloading model '+model)
     
     def predict(self, model, cDF, features,QoI):
         
-        contourData = cDF.copy(deep=True)
+        #contourData = cDF.copy(deep=True)
         
         if self.model_loaded == False:
             self.predictive_model = joblib.load(model)
             #print('Model loaded at prediction time')
         
-        contourData = self.yTransform(contourData,'direct',QoI)
+        cDF = self.yTransform(cDF,'direct',QoI)
         if self.normalization == 'log':
             warnings.filterwarnings("ignore")
-            contourData['y_model'], contourData['y_std'] = self.predictive_model.predict(np.log(contourData[features]), return_std=True)
+            cDF['y_model'], cDF['y_std'] = self.predictive_model.predict(np.log(cDF[features]), return_std=True)
         elif self.normalization == 'normal':
             warnings.filterwarnings("ignore")
-            contourData['y_model'], contourData['y_std'] = self.predictive_model.predict((contourData[features]-self.meanVal[features])/self.stdVal[features], return_std=True)
-        contourData = self.yTransform(contourData,'inverse',QoI)
+            cDF['y_model'], cDF['y_std'] = self.predictive_model.predict((cDF[features]-self.meanVal[features])/self.stdVal[features], return_std=True)
+        cDF = self.yTransform(cDF,'inverse',QoI)
         
-        return contourData
+        return cDF
         
 
     def gridsearch(self, seed, features, directory, QoI):
@@ -486,7 +493,7 @@ class gaussianProcess:
 
 class MyProblem(Problem):
 
-    def __init__(self, varDict, hTr, hD, hT, yMax, xList, refAbl, features, QoIs, home, testName):
+    def __init__(self, varDict, hTr, hD, hT, yMax, xList, refAbl, features, QoIs, home, testName,nCpu):
     
         self.trainPoints = hTr
         self.devPoints = hD
@@ -503,30 +510,53 @@ class MyProblem(Problem):
         
         self.nGenerations = 0
         
-        super().__init__(n_var=4,
+        self.nCpu = nCpu
+        
+        self.modelDict = {}
+        
+        for x in self.xList:
+            prefix = str(str(x)+'_').replace('.','p')
+            self.modelDict[prefix]= {}
+            for QoI in QoIs:
+                self.modelDict[prefix][QoI]= {}
+        
+        for x in self.xList:
+            trainPoints = {'h':self.trainPoints[:,0],'r':self.trainPoints[:,1],'x':[x]}
+            devPoints = {'h':self.devPoints[:,0],'r':self.devPoints[:,1],'x':[x]}
+            testPoints = {'h':self.testPoints[:,0],'r':self.testPoints[:,1],'x':[x]}
+            gp_model = gaussianProcess(trainPoints, devPoints, testPoints, self.yMax, self.datasetLocation)
+
+            prefix = str(str(x)+'_').replace('.','p')
+            
+            for QoI in QoIs:
+        
+                model = '../GPRModels/'+prefix+self.testPrefix+'_'+QoI+'.pkl'
+                gp_model.loadModel(model)
+                
+                self.modelDict[prefix][QoI] = cp.deepcopy(gp_model)
+        
+        super().__init__(n_var=5,
                          n_obj=len(QoIs),
-                         xl=[varDict[r'$h$'][0], varDict[r'$r$'][0],varDict[r'$\alpha$'][0], varDict[r'$x$'][0]],
-                         xu=[varDict[r'$h$'][1], varDict[r'$r$'][1],varDict[r'$\alpha$'][1], varDict[r'$x$'][1]])
+                         xl=[varDict[r'$h$'][0], varDict[r'$r$'][0],varDict[r'$\alpha$'][0], varDict[r'$k$'][0], varDict[r'$x$'][0]],
+                         xu=[varDict[r'$h$'][1], varDict[r'$r$'][1],varDict[r'$\alpha$'][1], varDict[r'$k$'][1], varDict[r'$x$'][1]])
         
         self.var_names = QoIs
     
-    def eval_model_delayed(self, h, r, alpha, x):
+    def eval_model_delayed(self, params):
         
-        xDiscrete = self.xList[int(np.round(x))]
-        rDiscrete = np.round(r)
-        hDiscrete = np.round(h*100)/100
-        alphaDiscrete = np.round(alpha,2)
+        hDiscrete = np.round(params[0]*100)/100
+        rDiscrete = np.round(params[1])
+        alphaDiscrete = np.round(params[2],2)
+        kDiscrete = np.round(params[3],2)
+        xDiscrete = self.xList[int(np.round(params[4]))]
+        #print(hDiscrete,rDiscrete,alphaDiscrete,kDiscrete,xDiscrete)
         
         fit_features = pd.DataFrame()
-        fit_features['y'] = np.concatenate((np.linspace(0.01,0.3,1000),np.linspace(0.3,1.0,1000)),axis=0)
+        fit_features['y'] = np.concatenate((np.linspace(0.01,0.3,500),np.linspace(0.3,1.0,500)),axis=0)
         fit_features['x'] = xDiscrete
         fit_features['r'] = rDiscrete
+        fit_features['k'] = kDiscrete
         fit_features['h'] = hDiscrete
-        
-        trainPoints = {'h':self.trainPoints[:,0],'r':self.trainPoints[:,1],'x':[xDiscrete]}
-        devPoints = {'h':self.devPoints[:,0],'r':self.devPoints[:,1],'x':[xDiscrete]}
-        testPoints = {'h':self.testPoints[:,0],'r':self.testPoints[:,1],'x':[xDiscrete]}
-        gp_model = gaussianProcess(trainPoints, devPoints, testPoints, self.yMax, self.datasetLocation)
 
         prefix = str(str(xDiscrete)+'_').replace('.','p')
         
@@ -535,13 +565,15 @@ class MyProblem(Problem):
         cont = 0
             
         for QoI in self.targetVars:
-        
-            model = '../GPRModels/'+prefix+self.testPrefix+'_'+QoI+'.pkl'
-            y_mean = gp_model.predict(model,fit_features,self.features,QoI)
+            
+            y_mean = self.modelDict[prefix][QoI].predict(None,fit_features,self.features,QoI)
             
             y_query, model_predictions = scale_predictions(y_mean, self.targetABL, alphaDiscrete, QoI)
             
             target = self.targetABL.loc[(self.targetABL['y']>=np.min(y_query)) & (self.targetABL['y']<=np.max(y_query)),QoI].to_numpy()
+            
+            if QoI == 'u':
+                model_predictions = model_predictions*kDiscrete
             
             scores[cont] = np.linalg.norm(model_predictions-target)
             cont+=1
@@ -552,11 +584,9 @@ class MyProblem(Problem):
         
         nIndividuals = params.shape[0]
         
-        temp = joblib.Parallel(n_jobs=12)(joblib.delayed(self.eval_model_delayed)(params[i,0],params[i,1],params[i,2],params[i,3]) for i in range(nIndividuals))
+        temp = joblib.Parallel(n_jobs=self.nCpu)(joblib.delayed(self.eval_model_delayed)(params[i,:]) for i in range(nIndividuals))
         
         self.nGenerations += 1
-        
-        print(self.nGenerations)
             
         out["F"] = np.array(temp)    
     
