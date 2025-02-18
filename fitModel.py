@@ -29,18 +29,18 @@ colors  = {'0.03':['tab:cyan',(0,(3,5,3,5))]
 
 ###########################################################
 
-nCpu = 1
+nCpu = 128
 
 
 # stresses_normalized
 hTrain = [0.04,0.08,0.12,0.16]
 rTrain = [52,62,72,82,92]
-testID = 'intensities'
+testID = 'inflow_stresses'
 
 devPairs = np.array([[0.06,57],[0.06,87],[0.14,67],[0.14,77]])
 testPairs = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
 
-QoIs = ['u']
+QoIs = ['u','uu','vv','ww','uv']
 #QoIs = ['u','Iu','Iv','Iw']
 #QoIs = ['Iuv']
 
@@ -132,7 +132,7 @@ elif mode == 'Inflow':
 
 elif mode == 'Plot':
 
-    yMax= 1.0
+    yMax= 1.5
 
     for x in xModels:
 

@@ -9,24 +9,33 @@ from modelDefinition import *
 ###########################################################
 
 PFDatabase = './GPRDatabase'
+#fName = 'TPU_highrise_14_middle_dimensional'
 fName = 'themisABL'
 
 # stresses_normalized
 intensitiesModelID = 'intensities'
 inflowModelID = 'inflow_stresses'
-uncertainty = True
+uncertainty = False
 
-hMatch_adimensional = 0.5
-
-Uscaling = 15.17
+hMatch_adimensional = 0.714
 
 ########################################################
 
+##### TPU_highrise_14_middle_dimensional setup ####
+#h = 0.04
+#r = 92
+#alpha = 0.70
+#k = 1.11
+#x = 2.7
+#hMatch_adimensional = 0.714
+
+##### themisABL setup ####
 h = 0.06
 r = 87
-alpha = 0.40
-k = 1.03
+alpha = 0.4
+k = 1.5
 x = 0.9
+#hMatch_adimensional = 0.5
 
 features = ['y','h','r']
 
@@ -45,7 +54,7 @@ for hTemp in hTrain:
         trainPairs[cont,:] = [hTemp, rTemp]
         cont+=1
 
-QoIs = ['u','Iu','Iv','Iw']
+#QoIs = ['u','Iu','Iv','Iw']
 
 yMax= 1.0
 
@@ -84,6 +93,7 @@ fit_features['y'] = np.linspace(0.01,1.0,2000)
 fit_features['x'] = x
 fit_features['h'] = h
 fit_features['r'] = r
+fit_features['k'] = k
 fit_features['alpha'] = alpha
 
 trainPoints = {'h':trainPairs[:,0],'r':trainPairs[:,1],'x':[x]}
@@ -108,17 +118,22 @@ model = '../GPRModels/'+directory+'_u.pkl'
 y_mean = gp.predict(model,fit_features,features,'u')
 y_mean = y_mean.loc[y_mean['y']<=alpha*np.max(y_mean['y'])]
 y_mean['y'] = y_mean['y']/(y_mean['y'].max())
-y_mean['y_model'] = y_mean['y_model']
+#y_mean['y_model'] = y_mean['y_model']
 
 U_ABL_dim = (interp1d(ref_abl['y'], ref_abl['u'])(hMatch_adimensional)).item()
-U_TIG_dim = (interp1d(y_mean['y'], y_mean['y_model'])(hMatch_adimensional)).item()*14.9457
+U_TIG_dim = (interp1d(y_mean['y'], y_mean['y_model'])(hMatch_adimensional)).item()
 
-Uscaling = U_ABL_dim/U_TIG_dim
-print(Uscaling)
-##print(y_mean)
-##print(ref_abl)
-input()
-        
+Uscaling = U_ABL_dim/(U_TIG_dim)
+
+#print(U_ABL_dim)
+#print(U_TIG_dim)
+#print(fit_features['k'][0])
+print('===========================================================================')
+print('Scaling velocity from GPR to reference ABL: '+str(np.round(Uscaling,3))+'m/s')
+print('Reference velocity at '+str(np.round(hMatch_adimensional*yref,3))+'m reference ABL height: '+str(np.round(U_ABL_dim,3))+'m/s')
+print('===========================================================================')
+
+
 my_dpi = 100
 plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
 cont=1
@@ -131,8 +146,8 @@ for QoI in ['u','Iu','Iv','Iw']:
     y_mean['y'] = y_mean['y']/(y_mean['y'].max())
     
     if QoI == 'u':
-        y_mean['y_model'] = y_mean['y_model']*Uscaling*14.9457
-        y_mean['y_std'] = y_mean['y_std']*Uscaling*14.9457
+        y_mean['y_model'] = y_mean['y_model']*Uscaling
+        y_mean['y_std'] = y_mean['y_std']*Uscaling
         
     plt.subplot(2,4,cont)
     
@@ -201,6 +216,7 @@ for QoI in ['u','Iu','Iv','Iw']:
 plt.suptitle('Chosen setup, dimension vs adimensional y')
 
 plt.legend(frameon=False)
+plt.savefig('TestCases/'+fName+'.png', bbox_inches='tight')
 plt.show()
 plt.close('all')
 
@@ -244,11 +260,11 @@ for x in [-4.95,-2.85]:
         y_mean['y'] = y_mean['y']/(y_mean['y'].max())
         
         if QoI == 'u':
-            y_mean['y_model'] = y_mean['y_model']/(y_mean['y_model'].iloc[-1])*Uscaling*14.9457
-            y_mean['y_std'] = y_mean['y_std']/(y_mean['y_model'].iloc[-1])*Uscaling*14.9457
+            y_mean['y_model'] = y_mean['y_model']/(y_mean['y_model'].iloc[-1])*Uscaling
+            y_mean['y_std'] = y_mean['y_std']/(y_mean['y_model'].iloc[-1])*Uscaling
         else:
-            y_mean['y_model'] = y_mean['y_model']*Uscaling*Uscaling*14.9457
-            y_mean['y_std'] = y_mean['y_std']*Uscaling*Uscaling*14.9457
+            y_mean['y_model'] = y_mean['y_model']*Uscaling*Uscaling
+            y_mean['y_std'] = y_mean['y_std']*Uscaling*Uscaling
             
         plt.subplot(2,3,cont)
         
@@ -289,7 +305,7 @@ for x in [-4.95,-2.85]:
         
         cont +=1
     
-    outputDF['y'] = outputDF['y']*100
+    outputDF['y'] = outputDF['y']
     outputDF[['x','y','z','x-velocity','y-velocity','z-velocity','uu-reynolds-stress','vv-reynolds-stress','ww-reynolds-stress','uv-reynolds-stress','uw-reynolds-stress','vw-reynolds-stress']].to_csv('TestCases/'+fName+'_'+lab+'.txt',sep='\t',index=False)
 
 plt.suptitle('Chosen setup')

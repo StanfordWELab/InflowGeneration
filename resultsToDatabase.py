@@ -9,18 +9,18 @@ import matplotlib.pyplot as plt
 
 #################################################################
 
-testID = 'intensities'
+testID = 'inflow_stresses'
 #xList = [0.3,0.6,0.9,1.2,1.5,2.1,2.4,2.7,3.0,3.3]
-xList = [0.3,0.6,0.9,1.2,1.5,1.8,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]
+#xList = [0.3,0.6,0.9,1.2,1.5,1.8,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]
 sort_entry = 'Dev RMSE'
-#xList = [1.8]
+xList = [-4.95]
 
 #################################################################
 
 cont = 1
-quantities = ['u','Iu','Iv','Iw']
+#quantities = ['u','Iu','Iv','Iw']
 # quantities = ['u','uu','vv','ww']
-#quantities = ['uv']
+quantities = ['u']
 
 #if plot==True:
     #my_dpi = 100

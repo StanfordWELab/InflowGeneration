@@ -59,12 +59,11 @@ PFDatabase = './GPRDatabase'
 
 #fNames = ['testABL']
 #fNames = ['TPU_ABL']
-fNames = ['themisABL']
-#fNames = ['inflowProfile_U10_Cat1_1uu1vv1ww']
+#fNames = ['themisABL','inflowProfile_U10_Cat1_1uu1vv1ww','inflowProfile_U10_Cat2_1uu1vv1ww','inflowProfile_U10_Cat3_1uu1vv1ww','inflowProfile_U10_Cat4_1uu1vv1ww']
+fNames = ['inflowProfile_U10_Cat3_1uu1vv1ww']
 #fNames = ['inflowProfile_U10_Cat1_1uu1vv1ww','inflowProfile_U10_Cat2_1uu1vv1ww','inflowProfile_U10_Cat3_1uu1vv1ww','inflowProfile_U10_Cat4_1uu1vv1ww']
 #fNames = ['inflowProfile_Cat2_1uu1vv1ww','inflowProfile_Cat3_1uu1vv1ww']
-#fNames = ['TPU_highrise_14_middle_higher']
-#fNames = ['TPU_highrise_14_middle_k']
+#fNames = ['TPU_highrise_14_middle']
 
 
 ##### Define these variables for Optimize-Gridsearch ####
@@ -76,9 +75,11 @@ fNames = ['themisABL']
 
 #### Define these variables for Optimize-NSGA ####
 xList = [0.3,0.6,0.9,1.2,1.5,1.8,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]
-variables = {r'$h$':[0.035,0.1649],r'$r$':[51.5,92.49],r'$\alpha$':[0.2,0.5],r'$k$':[0.3,3.0],r'$x$':[-0.49,len(xList)-0.51]}
-population_size = 64
-n_generations = 100
+variables = {r'$h$':[0.035,0.1649],r'$r$':[51.5,92.49],r'$\alpha$':[0.3,0.7],r'$k$':[0.8,1.8],r'$x$':[-0.49,len(xList)-0.51]}
+#xList = [0.9]
+#variables = {r'$h$':[0.06,0.06],r'$r$':[82,92],r'$\alpha$':[0.4,0.4],r'$k$':[0.8,2.0],r'$x$':[-0.49,len(xList)-0.51]}
+population_size = 120
+n_generations = 220
 
 
 ##### Define these variables for Plot-Gridsearch ####
@@ -182,7 +183,11 @@ for fName in fNames:
         df.to_csv('TestCases/'+fName+'_gridsearch.csv',index=False,index_label=False)
     
     elif mode =='Optimize-NSGA':
-
+        
+        print('\n=====================================================')
+        print('Optimizing ' +fName+'.dat')
+        print('=====================================================')
+        
         algorithm = NSGA2(pop_size=population_size)
 
         problemUser = MyProblem(variables,trainPairs,devPairs,testPairs,yMax,xList,ref_abl,features,effectiveQoIs,PFDatabase,testID,nCpu)
@@ -223,7 +228,7 @@ for fName in fNames:
         resUser.F = NSGA_results[effectiveQoIs].to_numpy()   # Pareto front
         resUser.X = NSGA_results[varNames].to_numpy()  # Decision variables
 
-        parallelCoordinatesPlot(resUser, xList, varNames, effectiveQoIs, indices)
+        parallelCoordinatesPlot(resUser, xList, varNames, effectiveQoIs, indices, fName)
 
     elif mode == 'Plot-Gridsearch':
 
@@ -300,24 +305,26 @@ for fName in fNames:
             rParams     = []
             alphaParams = []
             xParams     = []
+            kParams     = []
             
             escape = 't'
             while not(escape == 'y'):
                 more = 'a'
                 
-                listSolutions = input('What h, r, alpha, and x values do you want to plot? Write them as numbers separated by spaces\n')
+                listSolutions = input('What h, r, alpha, k, and x values do you want to plot? Write them as numbers separated by spaces\n')
                 try:
                     listSolutions = list(map(float, listSolutions.split()))
                 except:
                     listSolutions = [None]
                     
-                if len(listSolutions) == 4:
+                if len(listSolutions) == 5:
                     h     = listSolutions[0]
                     r     = listSolutions[1]
                     alpha = listSolutions[2]
-                    x     = listSolutions[3]
+                    k     = listSolutions[3]
+                    x     = listSolutions[4]
                     
-                    if (h<0.04) or (h>0.16) or (r<52) or (r>92) or (alpha<0.1) or alpha>1.0 or not(x in xList):
+                    if (h<0.04) or (h>0.16) or (r<52) or (r>92) or (alpha<0.1) or alpha>1.0 or not(x in xList) or k<0:
                         print('Bad choice buddy...')
                         if (h<0.04) or (h>0.16):
                             print('h should be in [0.04,0.16]!')
@@ -325,6 +332,8 @@ for fName in fNames:
                             print('r should be in [52,92]!')
                         if (alpha<0.1) or (alpha>1.0):
                             print('alpha should be in ]0.1,1.0],!')
+                        if k<0:
+                            print('x should be in ]0;ifinity[!')
                         if not(x in xList):
                             print('x should be in '+str(xList)+'!')
                         print('Try again\n')
@@ -332,6 +341,7 @@ for fName in fNames:
                         hParams.append(h)
                         rParams.append(r)
                         alphaParams.append(alpha)
+                        kParams.append(k)
                         xParams.append(x)
                         while not(more in ['y','n']):
                             if more == 'a':
@@ -339,21 +349,22 @@ for fName in fNames:
                                 print('h     = '+str(hParams))
                                 print('r     = '+str(rParams))
                                 print('alpha = '+str(alphaParams))
+                                print('k     = '+str(kParams))
                                 print('x     = '+str(xParams))
                             more = input('Wanna add more test setups?(y/n)\n')
                             
                 else:
-                    print('You need to specify four numerical parameters, try again!\n')
+                    print('You need to specify five numerical parameters, try again!\n')
                         
                 if more == 'n':
                     escape = 'y'
                     
                         
-            parameters = {r'$h$':hParams,r'$r$':rParams,r'$\alpha$':alphaParams,r'$x$':xParams,'idx':[None]*len(xParams)}
+            parameters = {r'$h$':hParams,r'$r$':rParams,r'$\alpha$':alphaParams,r'$k$':kParams,r'$x$':xParams,'idx':[None]*len(xParams)}
             
             print('\n=================================\n')
             print('Visualizing setups')
             print('\n=================================\n')
 
-        plotSetup(trainPairs, devPairs, testPairs, yMax, features, testID, PFDatabase, parameters, ref_abl, targetQoIs, uncertainty)
+        plotSetup(trainPairs, devPairs, testPairs, yMax, features, testID, PFDatabase, parameters, ref_abl, targetQoIs, uncertainty ,fName)
 

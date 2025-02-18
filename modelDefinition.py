@@ -39,6 +39,9 @@ def loadData(heights, location, roughness, yMax, home='./GPRDatabase', reference
             interp_df   = database_df[(abs(database_df['x'] - x) < 1e-6)]
             filtered_df = database_df[(abs(database_df['x'] - x) < 1e-6) & (database_df['y'] >= ymin) & (database_df['y'] <= yMax)]
             
+            #print(filtered_df)
+            #input()
+            
             temp['x'] = filtered_df['x'].round(1).astype(float)
             temp['y'] = filtered_df['y']/yMax
             temp['u'] = filtered_df['x-velocity'].copy(deep=True)
@@ -130,26 +133,26 @@ def scale_predictions(model_profile, target_profile, alpha, QoI):
     minVal = max([np.min(model_profile['y']),np.min(target_profile['y'])])
     maxVal = min([np.max(model_profile['y']),np.max(target_profile['y'])])
     
-    nModel  = len(model_profile.loc[(model_profile['y']>=minVal) & (model_profile['y']<=maxVal)])
-    nTarget = len(target_profile.loc[(target_profile['y']>=minVal) & (target_profile['y']<=maxVal)])
+    #nModel  = len(model_profile.loc[(model_profile['y']>=minVal) & (model_profile['y']<=maxVal)])
+    #nTarget = len(target_profile.loc[(target_profile['y']>=minVal) & (target_profile['y']<=maxVal)])
     
-    if nModel>=nTarget:
-        yQuery = target_profile.loc[(target_profile['y']>=minVal) & (target_profile['y']<=maxVal),'y'].to_numpy()
+    #if nModel>=nTarget:
+    yQuery = target_profile.loc[(target_profile['y']>=minVal) & (target_profile['y']<=maxVal),'y'].to_numpy()
+    
+    #yData   = model_profile.loc[(model_profile['y']>=minVal) & (model_profile['y']<=maxVal),'y'].to_numpy()
+    QoIData = model_profile.loc[(model_profile['y']>=minVal) & (model_profile['y']<=maxVal),'y_model'].to_numpy()
         
-        yData   = model_profile.loc[(model_profile['y']>=minVal) & (model_profile['y']<=maxVal),'y'].to_numpy()
-        QoIData = model_profile.loc[(model_profile['y']>=minVal) & (model_profile['y']<=maxVal),'y_model'].to_numpy()
-        
-    else:
-        raise Exception('You need to increase the # of points at which the model is evaluated')
+    #else:
+        #raise Exception('You need to increase the # of points at which the model is evaluated')
     
     QoIQuery = interp1d(model_profile['y'].to_numpy(),model_profile['y_model'].to_numpy())(yQuery)
                 
-    if QoI == 'u':
-        QoIQuery = QoIQuery/interp1d(yData,QoIData)(1.0).item()
+    #if QoI == 'u':
+        #QoIQuery = QoIQuery/interp1d(yData,QoIData)(1.0).item()
     
     return  yQuery, QoIQuery
         
-def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs, indices):
+def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs, indices, case):
 
     xPlot = np.linspace(0,1,len(QoIs))
 
@@ -182,7 +185,7 @@ def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs, indices):
             vmin, vmax = [0.05, 1.05]
             cm = plt.cm.tab20
         if paramNames[cont] == r'$k$':
-            vmin, vmax = [0.85, 1.15]
+            vmin, vmax = [np.round(vmin)-0.1, np.round(vmax)+0.1]
             cm = plt.cm.hsv
         if paramNames[cont] == r'$x$':
             param = [xValues.index(p) for p in param]
@@ -207,7 +210,7 @@ def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs, indices):
         plt.ylabel('RMSE')
             
         cbar=plt.colorbar(sm)
-        cbar.set_label(decisionVars[cont])
+        #cbar.set_label(decisionVars[cont])
         
         for x in xPlot:
             plt.plot([x]*10,np.linspace(y0Plot,y1Plot,10),color='black',alpha=0.5,linewidth=2)
@@ -221,12 +224,15 @@ def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs, indices):
             cbar.set_ticks(np.linspace(0,len(xValues)-1,len(xValues)))
             cbar.set_ticklabels(xValues)
             
+        plt.title(paramNames[cont])
+            
         cont+=1
         
     plt.axis('tight')
+    plt.savefig('TestCases/'+case+'_PCP.png', bbox_inches='tight')
     plt.show()
     
-def plotSetup(trainPairs, devPairs, testPairs, yMax, features, testID, PFDatabase, parameters, ref_abl, QoIs, uncertainty):
+def plotSetup(trainPairs, devPairs, testPairs, yMax, features, testID, PFDatabase, parameters, ref_abl, QoIs, uncertainty,case):
     
     header = list(ref_abl.columns)
     
@@ -268,8 +274,8 @@ def plotSetup(trainPairs, devPairs, testPairs, yMax, features, testID, PFDatabas
             y_mean['y'] = y_mean['y']/(y_mean['y'].max())
             
             if QoI == 'u':
-                y_mean['y_model'] = y_mean['y_model']/(y_mean['y_model'].iloc[-1])*fit_features['k']
-                y_mean['y_std'] = y_mean['y_std']/(y_mean['y_model'].iloc[-1])*fit_features['k']
+                y_mean['y_model'] = y_mean['y_model']*fit_features['k']
+                y_mean['y_std'] = y_mean['y_std']*fit_features['k']
                 
             plt.subplot(2,2,cont)
             
@@ -278,7 +284,7 @@ def plotSetup(trainPairs, devPairs, testPairs, yMax, features, testID, PFDatabas
                 plt.fill_betweenx(ref_abl['y'], ref_abl[QoI]*0.9, ref_abl[QoI]*1.1, color='tab:red', alpha=0.2,label=r'Reference $\pm$10%')
                 
             line = plt.plot(y_mean['y_model'],y_mean['y'],linestyle='--',linewidth=3
-                    ,label=str(parameters['idx'][i])+' h='+'{0:.2f}'.format(hTemp)+'m, r='+'{0:.0f}'.format(rTemp)+',\n'+r'$\alpha$='+'{0:.2f}'.format(alphaTemp)+', x='+'{0:.2f}'.format(xTemp)+'m')
+                    ,label=str(parameters['idx'][i])+' h='+'{0:.2f}'.format(hTemp)+'m, r='+'{0:.0f}'.format(rTemp)+',\n'+r'$\alpha$='+'{0:.2f}'.format(alphaTemp)+r', $k$='+'{0:.2f}'.format(kTemp)+', x='+'{0:.2f}'.format(xTemp)+'m')
             
             if QoI in header:
                 max_x = np.ceil((1.2*max([np.max(ref_abl[QoI]),np.max(y_mean['y_model'])])*10000).astype(int))/10000
@@ -304,6 +310,7 @@ def plotSetup(trainPairs, devPairs, testPairs, yMax, features, testID, PFDatabas
     plt.legend(frameon=False)
 
     #plt.savefig('../RegressionPlots/'+fName+'_test.png', bbox_inches='tight')
+    plt.savefig('TestCases/'+case+'_solutions.png', bbox_inches='tight')
     plt.show()
     plt.close('all')
     
@@ -374,50 +381,26 @@ class gaussianProcess:
         self.stdVal  = self.trainData.std()
         
         return
-    
-    def yTransform(self,df,mode,QoI):
-        
-        #if QoI == 'Iv':
-        
-            #if mode == 'direct':
-                #df['y'] = np.sqrt(df['y'])
-            
-            #if mode == 'inverse':
-                #df['y'] = df['y']**2
-        
-        #if QoI == 'Iv':
-        
-            #if mode == 'direct':
-                #df['y'] = np.log(df['y'])
-            
-            #if mode == 'inverse':
-                #df['y'] = np.exp(df['y'])
-        
-        return df
         
     
     def loadModel(self,model):
         
         self.predictive_model = joblib.load(model)
         self.model_loaded = True
-        print('Preloading model '+model)
+        #print('Preloading model '+model)
     
     def predict(self, model, cDF, features,QoI):
         
-        #contourData = cDF.copy(deep=True)
-        
         if self.model_loaded == False:
             self.predictive_model = joblib.load(model)
-            #print('Model loaded at prediction time')
-        
-        cDF = self.yTransform(cDF,'direct',QoI)
+            #print('Loading model from scratch')
+            
         if self.normalization == 'log':
             warnings.filterwarnings("ignore")
             cDF['y_model'], cDF['y_std'] = self.predictive_model.predict(np.log(cDF[features]), return_std=True)
         elif self.normalization == 'normal':
             warnings.filterwarnings("ignore")
             cDF['y_model'], cDF['y_std'] = self.predictive_model.predict((cDF[features]-self.meanVal[features])/self.stdVal[features], return_std=True)
-        cDF = self.yTransform(cDF,'inverse',QoI)
         
         return cDF
         
@@ -446,10 +429,6 @@ class gaussianProcess:
         
         gpr = GaussianProcessRegressor(kernel=eval(expression),alpha = alpha, random_state=seed, normalize_y=True)
         
-        self.trainData = self.yTransform(self.trainData,'direct',QoI)
-        self.devData   = self.yTransform(self.devData,  'direct',QoI)
-        self.testData  = self.yTransform(self.testData, 'direct',QoI)
-        
         if self.normalization == 'log':
             gpr.fit(np.log(self.trainData[features].to_numpy()), self.trainData[[QoI]].to_numpy())
             y_dev, _  = gpr.predict(np.log(self.devData[features]), return_std=True)
@@ -459,10 +438,6 @@ class gaussianProcess:
             gpr.fit(((self.trainData[features]-self.meanVal[features])/self.stdVal[features]).to_numpy(), self.trainData[[QoI]].to_numpy())
             y_dev, _  = gpr.predict(((self.devData[features]-self.meanVal[features])/self.stdVal[features]).to_numpy(), return_std=True)
             y_test, _ = gpr.predict(((self.testData[features]-self.meanVal[features])/self.stdVal[features]).to_numpy(), return_std=True)
-        
-        self.trainData = self.yTransform(self.trainData,'inverse',QoI)
-        self.devData   = self.yTransform(self.devData,  'inverse',QoI)
-        self.testData  = self.yTransform(self.testData, 'inverse',QoI)    
         
         dev_RMSE_relative  = np.linalg.norm((y_dev-self.devData[QoI].to_numpy())/self.devData[QoI].to_numpy())
         dev_RMSE  = np.linalg.norm(y_dev-self.devData[QoI].to_numpy())
@@ -514,6 +489,9 @@ class MyProblem(Problem):
         
         self.modelDict = {}
         
+        print(self.nCpu)
+        print('Preloading models...')
+        
         for x in self.xList:
             prefix = str(str(x)+'_').replace('.','p')
             self.modelDict[prefix]= {}
@@ -535,6 +513,8 @@ class MyProblem(Problem):
                 
                 self.modelDict[prefix][QoI] = cp.deepcopy(gp_model)
         
+        print('Models loaded!')
+        
         super().__init__(n_var=5,
                          n_obj=len(QoIs),
                          xl=[varDict[r'$h$'][0], varDict[r'$r$'][0],varDict[r'$\alpha$'][0], varDict[r'$k$'][0], varDict[r'$x$'][0]],
@@ -546,13 +526,15 @@ class MyProblem(Problem):
         
         hDiscrete = np.round(params[0]*100)/100
         rDiscrete = np.round(params[1])
-        alphaDiscrete = np.round(params[2],2)
-        kDiscrete = np.round(params[3],2)
+        #alphaDiscrete = np.round(params[2],2)
+        alphaDiscrete = params[2]
+        #kDiscrete = np.round(params[3],2)
+        kDiscrete = params[3]
         xDiscrete = self.xList[int(np.round(params[4]))]
         #print(hDiscrete,rDiscrete,alphaDiscrete,kDiscrete,xDiscrete)
         
         fit_features = pd.DataFrame()
-        fit_features['y'] = np.concatenate((np.linspace(0.01,0.3,500),np.linspace(0.3,1.0,500)),axis=0)
+        fit_features['y'] = np.concatenate((np.linspace(0.01,0.3,200),np.linspace(0.3,1.0,200)),axis=0)
         fit_features['x'] = xDiscrete
         fit_features['r'] = rDiscrete
         fit_features['k'] = kDiscrete
@@ -575,6 +557,12 @@ class MyProblem(Problem):
             if QoI == 'u':
                 model_predictions = model_predictions*kDiscrete
             
+                #if self.nGenerations >= 3:
+                    #plt.plot(model_predictions,y_query)
+                    #plt.plot(target,y_query)
+                    #print(kDiscrete,alphaDiscrete)
+                    #plt.show()
+                
             scores[cont] = np.linalg.norm(model_predictions-target)
             cont+=1
             
@@ -593,9 +581,11 @@ class MyProblem(Problem):
 try:
     os.mkdir('../GPRModels')
 except:
-    print('GPRModels directory already exist!')
+    pass
+    #print('GPRModels directory already exist!')
 
 try:
     os.mkdir('../RegressionPlots')
 except:
-    print('RegressionPlots directory already exist!')
+    pass
+    #print('RegressionPlots directory already exist!')
