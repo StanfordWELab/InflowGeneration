@@ -309,7 +309,7 @@ def plotSetup(trainPairs, devPairs, testPairs, yMax, features, testID, PFDatabas
 
     plt.legend(frameon=False)
 
-    #plt.savefig('../RegressionPlots/'+fName+'_test.png', bbox_inches='tight')
+    #plt.savefig('../RegressionPlots/'+fName+'_best.png', bbox_inches='tight')
     plt.savefig('TestCases/'+case+'_solutions.png', bbox_inches='tight')
     plt.show()
     plt.close('all')

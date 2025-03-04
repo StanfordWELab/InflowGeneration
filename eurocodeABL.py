@@ -11,8 +11,9 @@ from scipy.optimize import fsolve
             #,'HRB':[100.0,[3,4],[1/100,1/50,1/10,1/1]]}
 
 
-buildings = {'MRB':[30.0,[2,3,4],[1/1]]
-            ,'HRB':[100.0,[3,4],[1/1]]}
+#buildings = {'LRB':[6.0,[1,2],[1/50,1/25,1/10,1/1]]}
+buildings = {'MRB':[30.0,[2,3,4],[1/100,1/50]]}
+            #,'HRB':[100.0,[3,4]]}
 
 normalize = False
 
@@ -25,9 +26,10 @@ for bldg in buildings:
     
     H = buildings[bldg][0]
     
-    for tcat in buildings[bldg][1]:
-        for scale in buildings[bldg][2]:
-            
+    for scale in buildings[bldg][2]:
+    
+        for tcat in buildings[bldg][1]:
+                
             zmin = 0.2*H
             
             setup = pd.DataFrame()
@@ -41,13 +43,12 @@ for bldg in buildings:
             z0 = z0list[tcat]
             lat = 51.1 * np.pi / 180
 
-            Uref_f = 13
+            Uref_f = 25
             zref_f = 10
             z0_f = 0.05
             zmin_f = 2
             
             setup['y'] = np.arange(zmin, H*1.5+1e-6, 0.05*H)
-            #z = np.arange(zmin, H*1.5+1e-6, 0.05*H)
 
             # Coriolis factor
             omega = 7.27e-5
@@ -63,7 +64,8 @@ for bldg in buildings:
             # Velocity profile
             U_ASL_f = (ustar_f / kappa) * np.log(setup['y'] / z0_f)
             Ug_ASL_f = (ustar_f / kappa) * np.log(zg_ABL_f / z0_f)
-
+            
+            muN1 = 300;
             muN2 = 50
             zg_ABL1 = zg_ABL_f
             U_ABL1 = (ustar_f / kappa) * (np.log(setup['y'] / z0_f) + (1/290) * (ustar_f / (fc * zg_ABL1))**0.3 * ((muN2 * fc / ustar_f) * setup['y']) ** 2)
@@ -80,7 +82,9 @@ for bldg in buildings:
             fun = lambda ustar: Ug_ASL_f - (ustar / kappa) * np.log((0.08 * ustar / fc) / z0)
             ustar = fsolve(fun, ustar_f)[0]
             U_ASL_c = (ustar / kappa) * np.log(setup['y'] / z0)
-            U_ABL_c = (ustar / kappa) * (np.log(setup['y'] / z0) + (1/290) * (ustar / (fc * zg_ABL_f))**0.3 * ((muN2 * fc / ustar) * setup['y']) ** 2)
+            
+            zg_ASL_c = 0.08*ustar/fc;
+            U_ABL_c = (ustar / kappa) * (np.log(setup['y'] / z0) + (1/290) * (ustar / (fc * zg_ASL_c))**0.3 * ((muN2 * fc / ustar) * setup['y']) ** 2)
 
             # Turbulence intensities
             setup['u'] = (ustar / kappa) * np.log((setup['y'] + z0) / z0)
@@ -99,9 +103,8 @@ for bldg in buildings:
             setup['xLu'] = [CL * H ** mL]*len(setup['y'])
             setup['yLu'] = 0.5 * setup['xLu']
             setup['zLu'] = 0.3 * setup['xLu']
-
-            # Scale down vertical coordinate to model scale
             setup['y'] = setup['y']*scale
+            
             if normalize ==True:
                 normZ = H*scale
                 yLab  = 'z/H [-]'
@@ -115,7 +118,7 @@ for bldg in buildings:
             plt.plot(setup['u'], setup['y']/normZ, label='U')
             plt.xlabel('U [m/s]')
             plt.ylabel(yLab)
-            plt.xlim([0, 20])
+            #plt.xlim([0, 30])
 
             plt.subplot(1, 3, 2)
             plt.plot(setup['Iu'], setup['y'],label='Iu')
@@ -132,7 +135,7 @@ for bldg in buildings:
             plt.xlabel('L[m]')
             plt.ylabel(yLab)
             plt.legend()
-            plt.show()
+            #plt.show()
+            plt.close('all')
             
-            fName = bldg+'_Cat'+str(int(tcat))+'_scale_1to'+str(int(1/scale)) + '.txt'
-            setup.to_csv('TestCases/'+bldg+'_Cat'+str(int(tcat))+'.txt',index=False)
+            setup.to_csv('TestCases/'+bldg+'_Cat'+str(int(tcat))+'_scale1to'+str(int(1/scale))+'.dat',index=False)
