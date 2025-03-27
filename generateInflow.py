@@ -1,3 +1,4 @@
+import os
 import sys
 import joblib
 import pandas as pd
@@ -5,7 +6,8 @@ import numpy as np
 import matplotlib
 from matplotlib import pyplot as plt
 from modelDefinition import *
-
+from stl import mesh
+            
 ###########################################################
 
 PFDatabase = './GPRDatabase'
@@ -18,30 +20,42 @@ PFDatabase = './GPRDatabase'
 #reference = {'fName':'themisABL_alpha'
             #,'h':0.04,'r':92,'alpha':0.20,'k':1.5,'x':0.3,'hMatch':0.714}
 
-#### TPU_highrise_14_middle_dimensional setup ####
-reference = {'fName':'TPU_highrise_14_middle_dimensional'
-             ,'h':0.04,'r':92,'alpha':0.7,'k':1.11,'x':2.7,'hMatch':0.714}
+##### TPU_highrise_14_middle_dimensional setup ####
+#reference = {'fName':'TPU_highrise_14_middle_dimensional'
+             #,'h':0.04,'r':92,'alpha':0.7,'k':1.11,'x':2.7,'hMatch':0.714}
 
 ##### LRB Cat1 scale 1:50 ####
 #reference = {'fName':LRB_Cat1_scale1to50
              #,'h':0.12,'r':79,'alpha':0.18,'k':1.62,'x':11.0,'hMatch':0.4}
 
-##### LRB Cat1 scale 1:25 ####
-#fName = 'LRB_Cat1_scale1to25'
-#reference = {'fName':'LRB_Cat1_scale1to25'
-             #,'h':0.04,'r':75,'alpha':0.36,'k':1.36,'x':3.3,'hMatch':0.666}
+#### LRB Cat1 scale 1:25 ####
+reference = {'fName':'LRB_Cat1_scale1to25'
+             ,'h':0.04,'r':75,'alpha':0.36,'k':1.36,'x':3.3,'hMatch':0.666}
 
-##### LRB Cat1 scale 1:10 ####
-#reference = {'fName':'LRB_Cat1_scale1to10'
-             #,'h':0.16,'r':64,'alpha':0.90,'k':1.25,'x':9.0,'hMatch':0.666}
+###### LRB Cat1 scale 1:10 ####
+##reference = {'fName':'LRB_Cat1_scale1to10'
+             ##,'h':0.16,'r':64,'alpha':0.90,'k':1.25,'x':9.0,'hMatch':0.666}
 
-##### MRB Cat2 scale 1:100 ####
-#reference = {'fName':'MRB_Cat2_scale1to100'
-             #,'h':0.04,'r':92,'alpha':0.45,'k':1.39,'x':3.30,'hMatch':0.666}
+###### MRB Cat2 scale 1:100 ####
+##reference = {'fName':'MRB_Cat2_scale1to100'
+             ##,'h':0.04,'r':92,'alpha':0.45,'k':1.39,'x':3.30,'hMatch':0.666}
 
-#### MRB Cat3 scale 1:100 ####
-reference = {'fName':'MRB_Cat3_scale1to100'
-             ,'h':0.08,'r':92,'alpha':0.45,'k':1.56,'x':1.50,'hMatch':0.666}
+###### MRB Cat3 scale 1:100 ####
+##reference = {'fName':'MRB_Cat3_scale1to100'
+             ##,'h':0.08,'r':92,'alpha':0.45,'k':1.56,'x':1.50,'hMatch':0.666}
+
+##### LRB Cat1 ####
+#fName = 'LRB_Cat1'
+#reference = {'fName':'LRB_Cat1'
+             #,'h':0.06,'r':54,'alpha':0.42,'k':1.35,'x':3.3,'hMatch':0.666}
+
+###### LRB Cat2 ####
+##fName = 'LRB_Cat2'
+##reference = {'fName':'LRB_Cat2'
+             ##,'h':0.04,'r':89,'alpha':0.23,'k':1.75,'x':0.6,'hMatch':0.666}
+
+scaling = 3.0
+caseDirectory = './LRB_Cat1_scale1to25_times3'
 
 ########################################################
 
@@ -198,6 +212,9 @@ plt.show()
 plt.close('all')
 
 yMax = 1.5
+
+generateCase(scaling, reference['h'], reference['x'], caseDirectory, reference['fName'])
+Uscaling = 15
         
 my_dpi = 100
 plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
@@ -282,8 +299,8 @@ for x in [-4.95,-2.85]:
         
         cont +=1
     
-    outputDF['y'] = outputDF['y']
-    outputDF[['x','y','z','x-velocity','y-velocity','z-velocity','uu-reynolds-stress','vv-reynolds-stress','ww-reynolds-stress','uv-reynolds-stress','uw-reynolds-stress','vw-reynolds-stress']].to_csv('TestCases/'+reference['fName']+'_'+lab+'.txt',sep='\t',index=False)
+    outputDF['y'] = outputDF['y']*scaling
+    outputDF[['x','y','z','x-velocity','y-velocity','z-velocity','uu-reynolds-stress','vv-reynolds-stress','ww-reynolds-stress','uv-reynolds-stress','uw-reynolds-stress','vw-reynolds-stress']].to_csv(caseDirectory+'/'+reference['fName']+'_'+lab+'.txt',sep='\t',index=False)
 
 plt.suptitle('Chosen setup')
 plt.legend(frameon=False)

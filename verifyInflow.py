@@ -26,10 +26,12 @@ PFDatabase = './GPRDatabase'
 #reference = {'h':0.04,'r':75,'alpha':0.36,'x':3.3,'hMatch':0.4}
 #yMax = 0.36
 
-fName = 'LRB_Cat1_scale1to10'
-directories = {'../../CatherineABLs/LRB_Cat1_scale1to10/':[r'$U_{\infty}=45m/s$',[25000,75000],'tab:blue']}
-reference = {'h':0.16,'r':64,'alpha':0.90,'x':9.0,'hMatch':0.666}
+directories = {'../../CatherineABLs/LRB_Cat1_scale1to25/':[r'$U_{\infty}=45m/s$, U=3U_0',[25000,150000],'tab:blue',1.0]
+              ,'../../CatherineABLs/Scaled_LRB_Cat1_1to25_times3/':[r'$U_{\infty}=15m/s$, L = 3L_0',[25000,75000],'tab:orange',3.0]
+              ,'../../TIGTestMatrixLong/PFh0.04u15r72/':[r'Reference r=72',[25000,75000],'tab:grey',1.0]}
+reference = {'fName':'LRB_Cat1_scale1to25','h':0.04,'r':75,'alpha':0.36,'k':1.36,'x':3.3,'hMatch':0.666}
 yMax = 0.9
+adimensional = True
 
 ###########################################################
 
@@ -69,7 +71,7 @@ gp = gaussianProcess(trainPoints, devPoints, testPoints, yMax, PFDatabase)
 prefix = str(str(reference['x'])+'_').replace('.','p')
 directory = prefix+intensitiesModelID
     
-ref_abl = pd.read_csv('TestCases/'+fName+'.dat',sep=',')
+ref_abl = pd.read_csv('TestCases/'+reference['fName']+'.dat',sep=',')
 header = list(ref_abl.columns)
 idx = np.argmax(ref_abl['y'].to_numpy())
 
@@ -109,8 +111,13 @@ for fold in directories:
 
     uv = np.loadtxt(fold+prefix+'uv.'+str(directories[fold][1][1]).zfill(8)+'.collapse_width.dat',skiprows = 3)
     
-    resultsDF['y'] = avg_u[:,3]/yref
-    resultsDF['u'] = avg_u[:,5]
+    if adimensional == True:
+        U_adim = (interp1d(avg_u[:,3],avg_u[:,5])(reference['hMatch']*yref*directories[fold][3])).item()
+    else:
+        U_adim = 1.0
+    
+    resultsDF['y'] = avg_u[:,3]/(yref*directories[fold][3])
+    resultsDF['u'] = avg_u[:,5]/U_adim
     resultsDF['Iu'] = rms_u[:,5]/Umag[:,5]
     resultsDF['Iv'] = rms_v[:,5]/Umag[:,5]
     resultsDF['Iw'] = rms_w[:,5]/Umag[:,5]
@@ -134,8 +141,13 @@ for QoI in ['u','Iu','Iv','Iw']:
     y_mean['y'] = y_mean['y']/(y_mean['y'].max())
     
     if QoI == 'u':
-        y_mean['y_model'] = y_mean['y_model']*Uscaling
-        y_mean['y_std'] = y_mean['y_std']*Uscaling
+        if adimensional == True:
+            y_mean['y_model'] = y_mean['y_model']/U_TIG_dim
+            y_mean['y_std'] = y_mean['y_std']/U_TIG_dim
+            ref_abl[QoI] = ref_abl[QoI]/U_ABL_dim
+        else:
+            y_mean['y_model'] = y_mean['y_model']*Uscaling
+            y_mean['y_std'] = y_mean['y_std']*Uscaling
     
     plt.plot(y_mean['y_model'],y_mean['y'],label=r'Optimization prediction, $U_{\infty}=15m/s$',linewidth=2,color='tab:green')
                     
@@ -145,4 +157,5 @@ for QoI in ['u','Iu','Iv','Iw']:
     cont +=1
     
 plt.legend()
+plt.savefig('../RegressionPlots/AllQoIs.png', bbox_inches='tight')
 plt.show()

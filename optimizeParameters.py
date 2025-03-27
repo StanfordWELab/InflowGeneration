@@ -64,10 +64,7 @@ if __name__ == '__main__':
     #fNames = ['testABL']
     #fNames = ['TPU_ABL']
     #fNames = ['themisABL','inflowProfile_U10_Cat1_1uu1vv1ww','inflowProfile_U10_Cat2_1uu1vv1ww','inflowProfile_U10_Cat3_1uu1vv1ww','inflowProfile_U10_Cat4_1uu1vv1ww']
-    fNames = ['LRB_Cat1_scale1to50','LRB_Cat1_scale1to25','LRB_Cat1_scale1to10'
-            ,'LRB_Cat2_scale1to50','LRB_Cat2_scale1to25','LRB_Cat2_scale1to10'
-            ,'MRB_Cat2_scale1to100','MRB_Cat3_scale1to100','MRB_Cat4_scale1to100'
-            ,'MRB_Cat2_scale1to50','MRB_Cat3_scale1to50','MRB_Cat4_scale1to50']
+    fNames = ['MRB_Cat4']
     #fNames = ['inflowProfile_U10_Cat1_1uu1vv1ww','inflowProfile_U10_Cat2_1uu1vv1ww','inflowProfile_U10_Cat3_1uu1vv1ww','inflowProfile_U10_Cat4_1uu1vv1ww']
     #fNames = ['inflowProfile_Cat2_1uu1vv1ww','inflowProfile_Cat3_1uu1vv1ww']
     #fNames = ['TPU_highrise_14_middle']
@@ -77,7 +74,7 @@ if __name__ == '__main__':
     #xList = [[0.3,0.6,0.9,1.2,1.5,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]]
     #alphaList = [0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
     #rList = [52,57,62,67,72,77,82,87,92]
-    fNames = ['themisABL_alpha']
+    #fNames = ['themisABL_alpha']
 
 
     #### Define these variables for Optimize-NSGA ####

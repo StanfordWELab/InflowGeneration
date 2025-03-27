@@ -1,13 +1,15 @@
+import os
 import random
 import joblib
-import numpy as np
-import pandas as pd
-import copy as cp
 import warnings
+import numpy  as np
+import pandas as pd
+import copy   as cp
 
 from matplotlib import pyplot as plt
 from datetime import datetime
 from scipy.interpolate import interp1d
+from stl               import mesh
 
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, Matern, RationalQuadratic, DotProduct, WhiteKernel
@@ -576,7 +578,600 @@ class MyProblem(Problem):
         
         self.nGenerations += 1
             
-        out["F"] = np.array(temp)    
+        out["F"] = np.array(temp)
+        
+        
+        
+
+class generateCase:
+    
+    lSponge = 0.8
+    lBox    = 2.1
+    lFetch  = 2.7
+    spacing = 0.3
+    hDomain = 3.0
+    wDomain = 3.0
+    
+    upstreamLength = lBox + 0.5*spacing+lFetch
+    
+    def __init__(self, scaling, hRough, xABL, directory, fName):
+        
+        self.scaling   = scaling
+        self.hRough    = hRough
+        self.directory = directory
+        self.xABL = xABL
+        
+        try:
+            os.mkdir(self.directory)
+            os.mkdir(self.directory+'/Domain')
+        except:
+            print('Directory already exists')
+        
+        self.generateVolumes()
+        self.generateGeometry()
+        self.writeSurfer()
+        self.writeStitch()
+        self.writeCharlesInput(fName, prerun = False)
+        self.writeCharlesInput(fName, prerun = True)
+        os.system('cd '+str(directory)+r' && /home/mattiafc/cascade-inflow/bin/surfer.exe -i surferDomain.in')
+
+    def writeRect(self, rmin, rMAX, name):
+
+        xmin = rmin[0]
+        ymin = rmin[1]
+        zmin = rmin[2]
+
+        xMAX = rMAX[0]
+        yMAX = rMAX[1]
+        zMAX = rMAX[2]
+    
+        if (xmin > xMAX)or(ymin > yMAX)or(zmin > zMAX):
+            raise ValueError('Sugheiscion definiscion')
+    
+        if xmin == xMAX:
+
+            vertices = np.array([\
+                [xmin, ymin, zmin],
+                [xmin, ymin, zMAX],
+                [xMAX, yMAX, zMAX],
+                [xMAX, yMAX, zmin]])
+
+        elif ymin == yMAX:
+
+            vertices = np.array([\
+                [xmin, ymin, zmin],
+                [xmin, ymin, zMAX],
+                [xMAX, yMAX, zMAX],
+                [xMAX, yMAX, zmin]])
+
+        elif zmin == zMAX:
+
+            vertices = np.array([\
+                [xmin, ymin, zmin],
+                [xMAX, ymin, zMAX],
+                [xMAX, yMAX, zMAX],
+                [xmin, yMAX, zmin]])
+
+        else:
+            print('=================================== WARNING ' +name+' ==================================')
+            print('Sughellino, occhio che nel file ' +name+' ce una patch orientata in maniera non standard')
+
+            vertices = np.array([\
+                [xmin, ymin, zmin],
+                [xmin, ymin, zMAX],
+                [xMAX, yMAX, zMAX],
+                [xMAX, yMAX, zmin]])
+
+
+        # Define the 12 triangles composing the cube
+        faces = np.array([\
+            [0,1,2],
+            [0,2,3]])
+
+        # Create the mesh
+        stlFace = mesh.Mesh(np.zeros(faces.shape[0], dtype=mesh.Mesh.dtype))
+        for i, f in enumerate(faces):
+            for j in range(3):
+                stlFace.vectors[i][j] = vertices[f[j],:]
+                
+        stlFace.save(name)
+        
+        return
+
+    def writeTriangle(self, vert1, vert2, vert3, name):
+
+        vertices = np.array([vert1, vert2, vert3])
+
+
+        # Define the 12 triangles composing the cube
+        faces = np.array([[0,1,2]])
+
+        # Create the mesh
+        stlFace = mesh.Mesh(np.zeros(faces.shape[0], dtype=mesh.Mesh.dtype))
+        for i, f in enumerate(faces):
+            for j in range(3):
+                stlFace.vectors[i][j] = vertices[f[j],:]
+                
+        stlFace.save(name)
+        
+        return 0
+
+    def generateVolumes(self):
+
+        x0 = (self.lBox+0.5*self.spacing)*self.scaling
+        x1 = x0+self.lFetch*self.scaling
+        z0 = -0.5*self.wDomain*self.scaling
+        z1 =  0.5*self.wDomain*self.scaling
+
+        Cd = 100.0
+        spacing = [self.spacing*self.scaling, self.spacing*self.scaling]
+        L = [0.051*self.scaling, self.hRough*self.scaling, 0.102*self.scaling]
+
+        roughElement = np.array([-L[0]*0.5,L[0]*0.5,0,L[1],-L[2]*0.5,L[2]*0.5,Cd])
+
+        xElem = np.linspace(x0,x1, int(np.round((x1-x0)/spacing[0])+1))
+
+        zElemOdd = np.linspace(z0, z1, int(np.round((z1-z0)/spacing[1])+1))
+        zElemEven = np.linspace(z0+spacing[1]/2, z1-spacing[1]/2, int(np.round((z1-z0)/spacing[1])))
+
+        print('=================================================')
+        print('Elements at x = '+str(xElem))
+        print('Streamwise roughness rows: '+str(len(xElem)))
+        print('=================================================')
+        print('Odd rows elements at z =  '+str(zElemOdd))
+        print('Spanwise roughness elements, odd rows:  '+str(len(zElemOdd)))
+        print('Even rows elements at z = '+str(zElemEven))
+        print('Spanwise roughness elements, even rows: '+str(len(zElemEven)))
+        print('=================================================')
+
+        nRows = len(xElem)
+        nEven = len(zElemEven)
+        nOdd  = len(zElemOdd)
+
+        if nRows%2 == 0:
+            nElem = int(nEven*(nRows/2) +  nOdd*(nRows/2))
+        else:    
+            nElem = nEven*np.floor(nRows/2).astype(int) +  nOdd*np.ceil(nRows/2).astype(int)
+
+        roughIBMPoints = np.zeros((nElem,7))
+
+
+        print(roughElement.shape)
+        print(roughIBMPoints.shape)
+        print(nRows)
+
+        cont = 0
+        for i in range(len(xElem)):
+            x = xElem[i]
+            if (i+1)%2 == 1:
+                
+                for z in zElemOdd:
+                    roughIBMPoints[cont,:] = roughElement + np.array([x, x, 0, 0, z, z, 0])
+                    cont += 1
+                    
+            elif (i+1)%2 == 0:
+                
+                for z in zElemEven:
+                    roughIBMPoints[cont,:] = roughElement + np.array([x, x, 0, 0, z, z, 0])
+                    cont += 1
+            
+                
+        with open(self.directory + '/box_list.dat','w+') as out:
+            out.write(str(nElem) +' volumes')
+            for i in range(nElem):
+                out.write('\n')
+                out.write(str(np.round(roughIBMPoints[i,0],5))+' '+str(np.round(roughIBMPoints[i,1],5))+' '+str(np.round(roughIBMPoints[i,2],5)))
+                out.write(' '+str(np.round(roughIBMPoints[i,3],5))+' '+str(np.round(roughIBMPoints[i,4],5))+' '+str(np.round(roughIBMPoints[i,5],5)))
+                out.write(' '+str(np.round(roughIBMPoints[i,6],5)))
+                
+        return
+            
+    def generateGeometry(self):
+        
+        x0D = 0
+        x1D = (self.upstreamLength+self.xABL+7.0)*self.scaling
+        y0D = 0.0
+        y1DInlet = self.hDomain*self.scaling
+        y1DOutlet = y1DInlet+x1D*np.tan(0.488304*np.pi/180.0)
+        z0D = -0.5*self.wDomain*self.scaling
+        z1D =  0.5*self.wDomain*self.scaling
+
+        print('==== Domain starts from ' +str(x0D)+' ====')
+        
+        self.writeRect([x0D, y0D, z0D], [x1D, y1DInlet, z0D], self.directory+'/Domain/left')
+        self.writeTriangle([x0D, y1DInlet, z0D], [x1D, y1DInlet, z0D], [x1D, y1DOutlet, z0D], self.directory+'/Domain/leftTop')
+        self.writeRect([x0D, y0D, z1D], [x1D, y1DInlet, z1D], self.directory+'/Domain/right')
+        self.writeTriangle([x0D, y1DInlet, z1D], [x1D, y1DInlet, z1D], [x1D, y1DOutlet, z1D], self.directory+'/Domain/rightTop')
+        self.writeRect([x0D, y1DInlet, z0D], [x1D, y1DOutlet, z1D], self.directory+'/Domain/top')
+        self.writeRect([x0D, y0D, z0D], [x1D, y0D, z1D], self.directory+'/Domain/ground')
+        self.writeRect([x1D, y0D, z0D], [x1D, y1DOutlet, z1D], self.directory+'/Domain/outlet')
+        self.writeRect([x0D, y0D, z0D], [x0D, y1DInlet, z1D], self.directory+'/Domain/inlet')
+            
+        return
+                
+    def writeSurfer(self):
+        
+        with open(self.directory + '/surferDomain.in','w+') as out:
+            out.write('SURF STL_GROUP ./Domain/ground ./Domain/top ./Domain/left ./Domain/right ./Domain/outlet ./Domain/inlet ./Domain/leftTop ./Domain/rightTop\n\n')
+            out.write('ZIP_OPEN_EDGES\n\n')
+            out.write('FLIP ZONE_NAMES ground,outlet,left,leftTop\n\n')
+            out.write('MOVE_TO_ZONE NAME left ZONE_NAMES leftTop\n')
+            out.write('MOVE_TO_ZONE NAME right ZONE_NAMES rightTop\n\n')
+            out.write('SET_PERIODIC ZONES left right CART 0 0 '+str(3.0*self.scaling)+'\n\n')
+            out.write('WRITE_SBIN emptyDomain.sbin')
+            
+        return
+                
+    def writeStitch(self):
+        
+        delta   = np.round(0.09*self.scaling,8)
+        xEndRef = np.round((self.upstreamLength+self.xABL+1.0)*self.scaling*10000)/10000
+        zEndRef = np.round(0.7*self.wDomain*self.scaling*10000,5)/10000
+        yLevel2 = np.round(0.6*self.scaling,8)
+        yLevel3 = np.round(0.2*self.scaling,8)
+        
+        with open(self.directory + '/stitchDomain.in','w+') as out:
+            out.write('PART SURF SBIN emptyDomain.sbin\n\n')
+            out.write('HCP_DELTA '+str(delta)+'\n\n')
+            out.write('HCP_WINDOW BOX 0 '+str(xEndRef)+' 0 '+str(yLevel2)+' '+str(-zEndRef)+' '+str(zEndRef)+' LEVEL=2   NLAYERS=10\n')
+            out.write('HCP_WINDOW BOX 0 '+str(xEndRef)+' 0 '+str(yLevel3)+' '+str(-zEndRef)+' '+str(zEndRef)+' LEVEL=3   NLAYERS=10\n\n')
+            #out.write('COUNT_POINTS\nINTERACTIVE\n\n')
+            out.write('SMOOTH_MODE ALL\n')
+            out.write('NSMOOTH 100\n\n')
+            out.write('WRITE_RESTART emptyDomain.mles')
+            
+        return
+                
+    def writeCharlesInput(self,fName,prerun=True):
+        
+        if prerun == True:
+            dt = np.round(0.0001*self.scaling*10000,5)/10000
+            outputFile = self.directory + '/start.in'
+        else:
+            dt = np.round(0.0004*self.scaling*10000,5)/10000
+            outputFile = self.directory + '/charles.in'
+        
+        reset      = np.round(10*self.scaling,5)
+        xEndSponge = np.round(self.lSponge*self.scaling*1000,5)/1000
+        xEndTIG    = np.round(self.lBox*self.scaling*1000,5)/1000
+        yEndTIG    = np.round(1.2*self.hDomain*self.scaling*1000,5)/1000
+        zEndTIG    = np.round(0.7*self.wDomain*self.scaling*1000,5)/1000
+        L          = np.round(1.0*self.scaling*1000,5)/1000
+        relaxT     = np.round(0.0005*self.scaling*10000,5)/10000
+        
+        with open(outputFile,'w+') as out:
+            
+            out.write('# ============================\n\n')
+            out.write('RESTART = ./emptyDomain.mles #./data/result.xxxxxxxx.sles\n\n')
+            if prerun == True:
+                out.write('INIT u=1.0 0.0 0.0\nINIT p=10.0\nINIT time=0\nINIT step=0\n\n')
+            else:
+                out.write('INIT time=0\nINIT step=0\n\n')
+            
+            out.write('# Equation of state\n')
+            out.write('EOS HELMHOLTZ\nRHO = 1.225\nMU = 1.7894e-5\nHELMHOLTZ_SOS 340.65\n\n')
+            
+            out.write('# Time + output setup\n')
+            if prerun == True:
+                out.write('NSTEPS = 10000\nTIMESTEP DT = '+str(dt)+'\nCHECK_INTERVAL 10\nWRITE_RESULT NAME=data/result INTERVAL=1000\n\n')
+            else:
+                out.write('NSTEPS = 75000\nTIMESTEP DT = '+str(dt)+'\nCHECK_INTERVAL 1000\nWRITE_RESULT NAME=data/result INTERVAL=7500\n\n')
+                
+            out.write('RESET_STATS TIME='+str(reset)+'\nSTATS u p mag(u)\n\nSGS_MODEL VREMAN\n\nA_SGS_SPONGE COEFF 100.0 GEOM PLANE '+str(xEndSponge)+' 0.0 0.0 1.0 0.0 0.0\n\n')
+            
+            out.write('# Boundary conditions\n')
+            out.write('OUTLET = OUTLET 1.0 0.1 0.0 0.0 LOCAL_U\nGROUND = WM_ALG\nTOP    = WM_ALG\nINLET  = INLET_PROFILE FILE ./'+fName+'_inflow_input.txt FORMAT ASCII\n')
+            out.write('TURB_VOL_FORCING RELAX_T '+str(relaxT)+' DATA_ALF PROFILE ./'+fName+'_ALF_input.txt GEOM BOX 0 '+str(xEndTIG)+' 0 '+str(yEndTIG)+' '+str(-zEndTIG)+' '+str(zEndTIG)+' ESTIM_MEAN_V L '+str(L)+'  LIMIT_L_WALL_DIST\n\n')
+            
+            out.write('#################################\n')
+            out.write('######### SOLVER SETUP ##########\n')
+            out.write('#################################\n\n')
+            out.write('# advanced multigrid solver options\n')
+            out.write('MOMENTUM_SOLVER PATR\nMOMENTUM_RELAX 1.0\nMOMENTUM_MAXITER 1000\nMOMENTUM_ZERO 1e-6\n\nFORCING_TERM ON\n\n')
+            out.write('# Pressure equation\n')
+            out.write('PRESSURE_SOLVER MG\nPRESSURE_AGGLOMERATION_FACTOR 64\nPRESSURE_SPLIT_ORPHANED_COLORS\nPRESSURE_NCG 2\nPRESSURE_SMOOTHER CG\nPRESSURE_NSMOOTH 10\nPRESSURE_RELAX 1.0\nPRESSURE_MAX_ITER 1000\nPRESSURE_ZERO 1e-6')
+            if prerun == True:
+                out.write('\nINTERACTIVE')
+            
+            
+        return
+    
+
+
+class generateCase:
+    
+    lSponge = 0.8
+    lBox    = 2.1
+    lFetch  = 2.7
+    spacing = 0.3
+    hDomain = 3.0
+    wDomain = 3.0
+    
+    NSmooth = 100
+    
+    upstreamLength = lBox + 0.5*spacing+lFetch
+    
+    def __init__(self, scaling, hRough, xABL, directory, fName):
+        
+        self.scaling   = scaling
+        self.hRough    = hRough
+        self.directory = directory
+        self.xABL = xABL
+        
+        try:
+            os.mkdir(self.directory)
+            os.mkdir(self.directory+'/Domain')
+        except:
+            print('Directory already exists')
+        
+        self.generateVolumes()
+        self.generateGeometry()
+        self.writeSurfer()
+        self.writeStitch()
+        self.writeCharlesInput(fName, prerun = False)
+        self.writeCharlesInput(fName, prerun = True)
+        os.system('cd '+str(directory)+r' && /home/mattiafc/cascade-inflow/bin/surfer.exe -i surferDomain.in')
+
+    def writeRect(self, rmin, rMAX, name):
+
+        xmin = rmin[0]
+        ymin = rmin[1]
+        zmin = rmin[2]
+
+        xMAX = rMAX[0]
+        yMAX = rMAX[1]
+        zMAX = rMAX[2]
+    
+        if (xmin > xMAX)or(ymin > yMAX)or(zmin > zMAX):
+            raise ValueError('Sugheiscion definiscion')
+    
+        if xmin == xMAX:
+
+            vertices = np.array([\
+                [xmin, ymin, zmin],
+                [xmin, ymin, zMAX],
+                [xMAX, yMAX, zMAX],
+                [xMAX, yMAX, zmin]])
+
+        elif ymin == yMAX:
+
+            vertices = np.array([\
+                [xmin, ymin, zmin],
+                [xmin, ymin, zMAX],
+                [xMAX, yMAX, zMAX],
+                [xMAX, yMAX, zmin]])
+
+        elif zmin == zMAX:
+
+            vertices = np.array([\
+                [xmin, ymin, zmin],
+                [xMAX, ymin, zMAX],
+                [xMAX, yMAX, zMAX],
+                [xmin, yMAX, zmin]])
+
+        else:
+            print('=================================== WARNING ' +name+' ==================================')
+            print('Sughellino, occhio che nel file ' +name+' ce una patch orientata in maniera non standard')
+
+            vertices = np.array([\
+                [xmin, ymin, zmin],
+                [xmin, ymin, zMAX],
+                [xMAX, yMAX, zMAX],
+                [xMAX, yMAX, zmin]])
+
+
+        # Define the 12 triangles composing the cube
+        faces = np.array([\
+            [0,1,2],
+            [0,2,3]])
+
+        # Create the mesh
+        stlFace = mesh.Mesh(np.zeros(faces.shape[0], dtype=mesh.Mesh.dtype))
+        for i, f in enumerate(faces):
+            for j in range(3):
+                stlFace.vectors[i][j] = vertices[f[j],:]
+                
+        stlFace.save(name)
+        
+        return
+
+    def writeTriangle(self, vert1, vert2, vert3, name):
+
+        vertices = np.array([vert1, vert2, vert3])
+
+
+        # Define the 12 triangles composing the cube
+        faces = np.array([[0,1,2]])
+
+        # Create the mesh
+        stlFace = mesh.Mesh(np.zeros(faces.shape[0], dtype=mesh.Mesh.dtype))
+        for i, f in enumerate(faces):
+            for j in range(3):
+                stlFace.vectors[i][j] = vertices[f[j],:]
+                
+        stlFace.save(name)
+        
+        return 0
+
+    def generateVolumes(self):
+
+        x0 = (self.lBox+0.5*self.spacing)*self.scaling
+        x1 = x0+self.lFetch*self.scaling
+        z0 = -0.5*self.wDomain*self.scaling
+        z1 =  0.5*self.wDomain*self.scaling
+
+        Cd = 100.0
+        spacing = [self.spacing*self.scaling, self.spacing*self.scaling]
+        L = [0.051*self.scaling, self.hRough*self.scaling, 0.102*self.scaling]
+
+        roughElement = np.array([-L[0]*0.5,L[0]*0.5,0,L[1],-L[2]*0.5,L[2]*0.5,Cd])
+
+        xElem = np.linspace(x0,x1, int(np.round((x1-x0)/spacing[0])+1))
+
+        zElemOdd = np.linspace(z0, z1, int(np.round((z1-z0)/spacing[1])+1))
+        zElemEven = np.linspace(z0+spacing[1]/2, z1-spacing[1]/2, int(np.round((z1-z0)/spacing[1])))
+
+        print('=================================================')
+        print('Elements at x = '+str(xElem))
+        print('Streamwise roughness rows: '+str(len(xElem)))
+        print('=================================================')
+        print('Odd rows elements at z =  '+str(zElemOdd))
+        print('Spanwise roughness elements, odd rows:  '+str(len(zElemOdd)))
+        print('Even rows elements at z = '+str(zElemEven))
+        print('Spanwise roughness elements, even rows: '+str(len(zElemEven)))
+        print('=================================================')
+
+        nRows = len(xElem)
+        nEven = len(zElemEven)
+        nOdd  = len(zElemOdd)
+
+        if nRows%2 == 0:
+            nElem = int(nEven*(nRows/2) +  nOdd*(nRows/2))
+        else:    
+            nElem = nEven*np.floor(nRows/2).astype(int) +  nOdd*np.ceil(nRows/2).astype(int)
+
+        roughIBMPoints = np.zeros((nElem,7))
+
+
+        print(roughElement.shape)
+        print(roughIBMPoints.shape)
+        print(nRows)
+
+        cont = 0
+        for i in range(len(xElem)):
+            x = xElem[i]
+            if (i+1)%2 == 1:
+                
+                for z in zElemOdd:
+                    roughIBMPoints[cont,:] = roughElement + np.array([x, x, 0, 0, z, z, 0])
+                    cont += 1
+                    
+            elif (i+1)%2 == 0:
+                
+                for z in zElemEven:
+                    roughIBMPoints[cont,:] = roughElement + np.array([x, x, 0, 0, z, z, 0])
+                    cont += 1
+            
+                
+        with open(self.directory + '/box_list.dat','w+') as out:
+            out.write(str(nElem) +' volumes')
+            for i in range(nElem):
+                out.write('\n')
+                out.write(str(np.round(roughIBMPoints[i,0],5))+' '+str(np.round(roughIBMPoints[i,1],5))+' '+str(np.round(roughIBMPoints[i,2],5)))
+                out.write(' '+str(np.round(roughIBMPoints[i,3],5))+' '+str(np.round(roughIBMPoints[i,4],5))+' '+str(np.round(roughIBMPoints[i,5],5)))
+                out.write(' '+str(np.round(roughIBMPoints[i,6],5)))
+                
+        return
+            
+    def generateGeometry(self):
+        
+        x0D = 0
+        x1D = (self.upstreamLength+self.xABL+7.0)*self.scaling
+        y0D = 0.0
+        y1DInlet = self.hDomain*self.scaling
+        y1DOutlet = y1DInlet+x1D*np.tan(0.488304*np.pi/180.0)
+        z0D = -0.5*self.wDomain*self.scaling
+        z1D =  0.5*self.wDomain*self.scaling
+
+        print('==== Domain starts from ' +str(x0D)+' ====')
+        
+        self.writeRect([x0D, y0D, z0D], [x1D, y1DInlet, z0D], self.directory+'/Domain/left')
+        self.writeTriangle([x0D, y1DInlet, z0D], [x1D, y1DInlet, z0D], [x1D, y1DOutlet, z0D], self.directory+'/Domain/leftTop')
+        self.writeRect([x0D, y0D, z1D], [x1D, y1DInlet, z1D], self.directory+'/Domain/right')
+        self.writeTriangle([x0D, y1DInlet, z1D], [x1D, y1DInlet, z1D], [x1D, y1DOutlet, z1D], self.directory+'/Domain/rightTop')
+        self.writeRect([x0D, y1DInlet, z0D], [x1D, y1DOutlet, z1D], self.directory+'/Domain/top')
+        self.writeRect([x0D, y0D, z0D], [x1D, y0D, z1D], self.directory+'/Domain/ground')
+        self.writeRect([x1D, y0D, z0D], [x1D, y1DOutlet, z1D], self.directory+'/Domain/outlet')
+        self.writeRect([x0D, y0D, z0D], [x0D, y1DInlet, z1D], self.directory+'/Domain/inlet')
+            
+        return
+                
+    def writeSurfer(self):
+        
+        with open(self.directory + '/surferDomain.in','w+') as out:
+            out.write('SURF STL_GROUP ./Domain/ground ./Domain/top ./Domain/left ./Domain/right ./Domain/outlet ./Domain/inlet ./Domain/leftTop ./Domain/rightTop\n\n')
+            out.write('ZIP_OPEN_EDGES\n\n')
+            out.write('FLIP ZONE_NAMES ground,outlet,left,leftTop\n\n')
+            out.write('MOVE_TO_ZONE NAME left ZONE_NAMES leftTop\n')
+            out.write('MOVE_TO_ZONE NAME right ZONE_NAMES rightTop\n\n')
+            out.write('SET_PERIODIC ZONES left right CART 0 0 '+str(3.0*self.scaling)+'\n\n')
+            out.write('WRITE_SBIN emptyDomain.sbin')
+            
+        return
+                
+    def writeStitch(self):
+        
+        delta   = np.round(0.09*self.scaling,8)
+        xEndRef = np.round((self.upstreamLength+self.xABL+1.0)*self.scaling*10000)/10000
+        zEndRef = np.round(0.7*self.wDomain*self.scaling*10000,5)/10000
+        yLevel2 = np.round(0.6*self.scaling,8)
+        yLevel3 = np.round(0.2*self.scaling,8)
+        
+        with open(self.directory + '/stitchDomain.in','w+') as out:
+            out.write('PART SURF SBIN emptyDomain.sbin\n\n')
+            out.write('HCP_DELTA '+str(delta)+'\n\n')
+            out.write('HCP_WINDOW BOX 0 '+str(xEndRef)+' 0 '+str(yLevel2)+' '+str(-zEndRef)+' '+str(zEndRef)+' LEVEL=2   NLAYERS=10\n')
+            out.write('HCP_WINDOW BOX 0 '+str(xEndRef)+' 0 '+str(yLevel3)+' '+str(-zEndRef)+' '+str(zEndRef)+' LEVEL=3   NLAYERS=10\n\n')
+            #out.write('COUNT_POINTS\nINTERACTIVE\n\n')
+            out.write('SMOOTH_MODE ALL\n')
+            out.write('NSMOOTH 100\n\n')
+            out.write('WRITE_RESTART emptyDomain.mles')
+            
+        return
+                
+    def writeCharlesInput(self,fName,prerun=True):
+        
+        if prerun == True:
+            dt = np.round(0.0001*self.scaling*10000,5)/10000
+            outputFile = self.directory + '/start.in'
+        else:
+            dt = np.round(0.0004*self.scaling*10000,5)/10000
+            outputFile = self.directory + '/charles.in'
+        
+        reset      = np.round(10*self.scaling,5)
+        xEndSponge = np.round(self.lSponge*self.scaling*1000,5)/1000
+        xEndTIG    = np.round(self.lBox*self.scaling*1000,5)/1000
+        yEndTIG    = np.round(1.2*self.hDomain*self.scaling*1000,5)/1000
+        zEndTIG    = np.round(0.7*self.wDomain*self.scaling*1000,5)/1000
+        L          = np.round(1.0*self.scaling*1000,5)/1000
+        relaxT     = np.round(0.0005*self.scaling*10000,5)/10000
+        
+        with open(outputFile,'w+') as out:
+            
+            out.write('# ============================\n\n')
+            out.write('RESTART = ./emptyDomain.mles #./data/result.xxxxxxxx.sles\n\n')
+            if prerun == True:
+                out.write('INIT u=1.0 0.0 0.0\nINIT p=10.0\nINIT time=0\nINIT step=0\n\n')
+            else:
+                out.write('INIT time=0\nINIT step=0\n\n')
+            
+            out.write('# Equation of state\n')
+            out.write('EOS HELMHOLTZ\nRHO = 1.225\nMU = 1.7894e-5\nHELMHOLTZ_SOS 340.65\n\n')
+            
+            out.write('# Time + output setup\n')
+            if prerun == True:
+                out.write('NSTEPS = 10000\nTIMESTEP DT = '+str(dt)+'\nCHECK_INTERVAL 10\nWRITE_RESULT NAME=data/result INTERVAL=1000\n\n')
+            else:
+                out.write('NSTEPS = 75000\nTIMESTEP DT = '+str(dt)+'\nCHECK_INTERVAL 1000\nWRITE_RESULT NAME=data/result INTERVAL=7500\n\n')
+                
+            out.write('RESET_STATS TIME='+str(reset)+'\nSTATS u p mag(u)\n\nSGS_MODEL VREMAN\n\nA_SGS_SPONGE COEFF 100.0 GEOM PLANE '+str(xEndSponge)+' 0.0 0.0 1.0 0.0 0.0\n\n')
+            
+            out.write('# Boundary conditions\n')
+            out.write('OUTLET = OUTLET 1.0 0.1 0.0 0.0 LOCAL_U\nGROUND = WM_ALG\nTOP    = WM_ALG\nINLET  = INLET_PROFILE FILE ./'+fName+'_inflow_input.txt FORMAT ASCII\n')
+            out.write('TURB_VOL_FORCING RELAX_T '+str(relaxT)+' DATA_ALF PROFILE ./'+fName+'_ALF_input.txt GEOM BOX 0 '+str(xEndTIG)+' 0 '+str(yEndTIG)+' '+str(-zEndTIG)+' '+str(zEndTIG)+' ESTIM_MEAN_V L '+str(L)+'  LIMIT_L_WALL_DIST\n\n')
+            
+            out.write('#################################\n')
+            out.write('######### SOLVER SETUP ##########\n')
+            out.write('#################################\n\n')
+            out.write('# advanced multigrid solver options\n')
+            out.write('MOMENTUM_SOLVER PATR\nMOMENTUM_RELAX 1.0\nMOMENTUM_MAXITER 1000\nMOMENTUM_ZERO 1e-6\n\nFORCING_TERM ON\n\n')
+            out.write('# Pressure equation\n')
+            out.write('PRESSURE_SOLVER MG\nPRESSURE_AGGLOMERATION_FACTOR 64\nPRESSURE_SPLIT_ORPHANED_COLORS\nPRESSURE_NCG 2\nPRESSURE_SMOOTHER CG\nPRESSURE_NSMOOTH 10\nPRESSURE_RELAX 1.0\nPRESSURE_MAX_ITER 1000\nPRESSURE_ZERO 1e-6')
+            if prerun == True:
+                out.write('\nINTERACTIVE')
+            
+            
+        return
     
 try:
     os.mkdir('../GPRModels')
