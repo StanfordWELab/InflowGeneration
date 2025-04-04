@@ -15,28 +15,20 @@ PFDatabase = './GPRDatabase'
               #,'../../TIGTestMatrixLong/PFh0.04u15r72/':[r'Reference r=72',[25000,75000],'tab:grey',1.0]}
 #reference = {'fName':'LRB_Cat1_scale1to25','h':0.04,'r':75,'alpha':0.36,'k':1.36,'x':3.3,'hMatch':0.666}
 
-#directories = {'../../CatherineABLs/LRB_Cat1_geometric_1to50/':[r'$U_{\infty}=15m/s$, 1to50',[25000,100000],'tab:orange',0.42857143*0.42]
-              #,'../../CatherineABLs/LRB_Cat1_geometric_1to25/':[r'$U_{\infty}=15m/s$, 1to25',[25000,75000], 'tab:blue',0.857142860*0.42]
-              #,'../../CatherineABLs/LRB_Cat1_geometric_1to10/':[r'$U_{\infty}=15m/s$, 1to10',[25000,100000],'tab:cyan',2.1428572*0.42]
-              #,'../../CatherineABLs/LRB_Cat1_geometric_1to1/': [r'$U_{\infty}=15m/s$, 1to1', [25000,100000],'tab:purple',21.428572*0.42]
+#directories = {'../../CatherineABLs/LRB_Cat1_geometric_1to25/':[r'$U_{\infty}=15m/s$, 1to25',[25000,75000],'tab:blue',0.857142860*0.42]
               #,'../../TIGTestMatrixLong/PFh0.06u15r57/':[r'Reference r=57',[25000,75000],'tab:grey',0.42]}
-
-directories = {'../../CatherineABLs/LRB_Cat1_geometric_1to50/':[r'$U_{\infty}=15m/s$, 1to50',[25000,100000],'tab:orange',0.42857143*0.42]
-              ,'../../CatherineABLs/LRB_Cat1_geometric_1to21/':[r'$U_{\infty}=15m/s$, 1to21',[25000,100000],'tab:blue',1.0*0.42]
-              ,'../../CatherineABLs/LRB_Cat1_geometric_1to10/': [r'$U_{\infty}=15m/s$,1to10', [25000,100000],'tab:cyan',2.1428572*0.42]
-              ,'../../CatherineABLs/LRB_Cat1_geometric_1to1/': [r'$U_{\infty}=15m/s$, 1to1', [25000,100000],'tab:purple',21.428572*0.42]}
-reference = {'fName':'LRB_Cat1','h':0.06,'r':54,'alpha':0.42,'k':1.35,'x':3.3,'hMatch':0.666}
+#reference = {'fName':'LRB_Cat1','h':0.06,'r':54,'alpha':0.42,'k':1.35,'x':3.3,'hMatch':0.666}
 
 
 
 #fName = 'themisABL'
-#directories = {'../../InflowValidation/ThemisShortPFh0.06u15r87/':[r'$U_{\infty}=26m/s$',[25000,75000],'tab:blue',1.0]}
-#reference = {'fName':'themisABL','h':0.06,'r':87,'alpha':0.4,'x':0.9,'hMatch':0.714}
-##prefix = '0p9_'
-yMax = 0.42
+directories = {'../../InflowValidation/ThemisShortPFh0.06u15r87/':[r'$U_{\infty}=26m/s$',[25000,75000],'tab:blue',1.0]}
+reference = {'fName':'themisABL','h':0.06,'r':87,'alpha':0.4,'x':0.9,'hMatch':0.714}
+#prefix = '0p9_'
+yMax = 0.4
 
 #yMax = 0.9
-adimensional = True
+adimensional = False
 
 ###########################################################
 
@@ -97,7 +89,7 @@ U_TIG_dim = (interp1d(y_mean['y'], y_mean['y_model'])(reference['hMatch'])).item
 Uscaling = U_ABL_dim/(U_TIG_dim)
 
 my_dpi = 100
-plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
+plt.figure(figsize=(1100/my_dpi, 700/my_dpi), dpi=my_dpi)
 
 
 for fold in directories:
@@ -130,37 +122,25 @@ for fold in directories:
     for QoI in ['u','Iu','Iv','Iw']:
         
         plt.subplot(1,4,cont)
+                    
+        if (QoI in header):
+            plt.plot(ref_abl[QoI],ref_abl['y'],color='#E5C100',label='Target',linewidth=2)
+            plt.fill_betweenx(ref_abl['y'], ref_abl[QoI]*0.8, ref_abl[QoI]*1.2, color='#E5C100', alpha=0.35,label=r'Reference $\pm$10%')
+        plt.gca().set_yticklabels([])
+        plt.gca().set_xticklabels([])
             
-        plt.plot(resultsDF[QoI],resultsDF['y'], label = directories[fold][0], color=directories[fold][2],linewidth=2)
-        plt.ylim([0,1.0])
+        plt.plot(resultsDF[QoI],resultsDF['y'], label = directories[fold][0], color='tab:red',linewidth=2)
+        plt.ylim([0,1.2])
+        plt.gca().set_yticklabels([])
+        plt.gca().set_xticklabels([])
+        #plt.gca().set_ytick([])
+        plt.axis('off')
 
         cont += 1
-cont = 1
-for QoI in ['u','Iu','Iv','Iw']:
-    plt.subplot(1,4,cont)
+#cont = 1
+#for QoI in ['u','Iu','Iv','Iw']:
+    ##plt.gca().set_ytick([])
     
-    model = '../GPRModels/'+directory+'_'+QoI+'.pkl'
-    
-    y_mean = gp.predict(model,fit_features,features,QoI)
-    y_mean = y_mean.loc[y_mean['y']<=reference['alpha']*np.max(y_mean['y'])]
-    y_mean['y'] = y_mean['y']/(y_mean['y'].max())
-    
-    if QoI == 'u':
-        if adimensional == True:
-            y_mean['y_model'] = y_mean['y_model']/U_TIG_dim
-            y_mean['y_std'] = y_mean['y_std']/U_TIG_dim
-            ref_abl[QoI] = ref_abl[QoI]/U_ABL_dim
-        else:
-            y_mean['y_model'] = y_mean['y_model']*Uscaling
-            y_mean['y_std'] = y_mean['y_std']*Uscaling
-    
-    plt.plot(y_mean['y_model'],y_mean['y'],label=r'Optimization prediction, $U_{\infty}=15m/s$',linewidth=2,color='tab:green')
-                    
-    if (QoI in header):
-        plt.plot(ref_abl[QoI],ref_abl['y'],color='tab:red',label='Target',linewidth=2)
-        plt.fill_betweenx(ref_abl['y'], ref_abl[QoI]*0.9, ref_abl[QoI]*1.1, color='tab:red', alpha=0.2,label=r'Reference $\pm$10%')
-    cont +=1
-    
-plt.legend()
-plt.savefig('../RegressionPlots/AllQoIs.png', bbox_inches='tight')
+#plt.legend()
+plt.savefig('test.svg', format="svg", bbox_inches='tight')
 plt.show()

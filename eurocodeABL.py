@@ -12,8 +12,7 @@ from scipy.optimize import fsolve
 
 
 #buildings = {'LRB':[6.0,[1,2],[1/50,1/25,1/10,1/1]]}
-buildings = {'MRB':[30.0,[2,3,4],[1/100,1/50]]}
-            #,'HRB':[100.0,[3,4]]}
+buildings = {'HRB':[100.0,[2,3,4],[1.0/1.0]]}
 
 normalize = False
 

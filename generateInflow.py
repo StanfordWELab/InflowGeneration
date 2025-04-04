@@ -28,9 +28,9 @@ PFDatabase = './GPRDatabase'
 #reference = {'fName':LRB_Cat1_scale1to50
              #,'h':0.12,'r':79,'alpha':0.18,'k':1.62,'x':11.0,'hMatch':0.4}
 
-#### LRB Cat1 scale 1:25 ####
-reference = {'fName':'LRB_Cat1_scale1to25'
-             ,'h':0.04,'r':75,'alpha':0.36,'k':1.36,'x':3.3,'hMatch':0.666}
+##### LRB Cat1 scale 1:25 ####
+#reference = {'fName':'LRB_Cat1_scale1to25'
+             #,'h':0.04,'r':75,'alpha':0.36,'k':1.36,'x':3.3,'hMatch':0.666}
 
 ###### LRB Cat1 scale 1:10 ####
 ##reference = {'fName':'LRB_Cat1_scale1to10'
@@ -49,13 +49,24 @@ reference = {'fName':'LRB_Cat1_scale1to25'
 #reference = {'fName':'LRB_Cat1'
              #,'h':0.06,'r':54,'alpha':0.42,'k':1.35,'x':3.3,'hMatch':0.666}
 
-###### LRB Cat2 ####
-##fName = 'LRB_Cat2'
-##reference = {'fName':'LRB_Cat2'
-             ##,'h':0.04,'r':89,'alpha':0.23,'k':1.75,'x':0.6,'hMatch':0.666}
+##### LRB Cat2 ####
+#fName = 'LRB_Cat2'
+#reference = {'fName':'LRB_Cat2'
+             #,'h':0.04,'r':89,'alpha':0.23,'k':1.75,'x':0.6,'hMatch':0.666}
 
-scaling = 3.0
-caseDirectory = './LRB_Cat1_scale1to25_times3'
+#### LRB Cat2 ####
+fName = 'MRB_Cat2'
+reference = {'fName':'MRB_Cat2'
+             ,'h':0.04,'r':92,'alpha':0.42,'k':1.47,'x':3.0,'hMatch':0.666}
+
+scale = 1.0/1.0
+#scale = 1.0/21.42857142857111
+HABL = 30.0
+
+scaling = HABL*scale/reference['alpha']
+caseDirectory = './'+reference['fName']+'_geometric_1to'+str(np.round(1.0/scale).astype(int))
+
+plotABL = False
 
 ########################################################
 
@@ -124,92 +135,100 @@ print('Scaling velocity from GPR to reference ABL: '+str(np.round(Uscaling,3))+'
 print('Reference velocity at '+str(np.round(reference['hMatch']*yref,3))+'m reference ABL height: '+str(np.round(U_ABL_dim,3))+'m/s')
 print('===========================================================================')
 
+if plotABL == True:
 
-my_dpi = 100
-plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
-cont=1
+    my_dpi = 100
+    plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
+    cont=1
 
-for QoI in ['u','Iu','Iv','Iw']:
-    model = '../GPRModels/'+directory+'_'+QoI+'.pkl'
-    
-    y_mean = gp.predict(model,fit_features,features,QoI)
-    y_mean = y_mean.loc[y_mean['y']<=reference['alpha']*np.max(y_mean['y'])]
-    y_mean['y'] = y_mean['y']/(y_mean['y'].max())
-    
-    if QoI == 'u':
-        y_mean['y_model'] = y_mean['y_model']*Uscaling
-        y_mean['y_std'] = y_mean['y_std']*Uscaling
+    for QoI in ['u','Iu','Iv','Iw']:
+        model = '../GPRModels/'+directory+'_'+QoI+'.pkl'
         
-    plt.subplot(2,4,cont)
-    
-    if (QoI in header):
-        plt.plot(ref_abl[QoI],ref_abl['y'],color='tab:red',label='Target',linewidth=3)
-        plt.fill_betweenx(ref_abl['y'], ref_abl[QoI]*0.9, ref_abl[QoI]*1.1, color='tab:red', alpha=0.2,label=r'Reference $\pm$10%')
+        y_mean = gp.predict(model,fit_features,features,QoI)
+        y_mean = y_mean.loc[y_mean['y']<=reference['alpha']*np.max(y_mean['y'])]
+        y_mean['y'] = y_mean['y']/(y_mean['y'].max())
         
-    line = plt.plot(y_mean['y_model'],y_mean['y'],linestyle='--',linewidth=3
-            ,label=r'x='+'{0:.2f}'.format(reference['x'])+'m,h='+'{0:.2f}'.format(reference['h'])+'m'+r'm,$\alpha$='+'{0:.2f}'.format(reference['alpha'])+r',r='+'{0:.2f}'.format(reference['r']))
-    
-    if QoI in header:
-        max_x = np.ceil((1.2*max([np.max(ref_abl[QoI]),np.max(y_mean['y_model'])])*10000).astype(int))/10000
-    else:
-        max_x = np.ceil(1.2*np.max(y_mean['y_model'])*10000).astype(int)/10000
+        if QoI == 'u':
+            #y_mean['y_model'] = y_mean['y_model']*Uscaling
+            #y_mean['y_std'] = y_mean['y_std']*Uscaling
+            y_mean['y_model'] = y_mean['y_model']*reference['k']
+            y_mean['y_std'] = y_mean['y_std']*reference['k']
+            
+        plt.subplot(2,4,cont)
         
-    if uncertainty == True:
-        plt.fill_betweenx(y_mean['y'], y_mean['y_model']-2*y_mean['y_std'], y_mean['y_model']+2*y_mean['y_std'], color=line[0].get_color(), alpha=0.2)
-    
-    
-    plt.xlim(0,1.1*max_x)
-    plt.xlabel(QoI)
-    
-    plt.ylim(0,1)
-    plt.yticks([0.25,0.5,0.75,1.0])
-    
-    if QoI=='u'or QoI == 'Iv':
-        plt.ylabel('y/H')
-    else:
-        plt.gca().set_yticklabels([])
+        if (QoI in header):
+            
+            if QoI == 'u':
+                plt.plot(ref_abl[QoI]/ref_abl['u'].iloc[idx],ref_abl['y'],color='tab:red',label='Target',linewidth=3)
+                plt.fill_betweenx(ref_abl['y'], ref_abl[QoI]/ref_abl['u'].iloc[idx]*0.9, ref_abl[QoI]/ref_abl['u'].iloc[idx]*1.1, color='tab:red', alpha=0.2,label=r'Reference $\pm$10%')
+            else:
+                plt.plot(ref_abl[QoI],ref_abl['y'],color='tab:red',label='Target',linewidth=3)
+                plt.fill_betweenx(ref_abl['y'], ref_abl[QoI]*0.9, ref_abl[QoI]*1.1, color='tab:red', alpha=0.2,label=r'Reference $\pm$10%')
+            
+        line = plt.plot(y_mean['y_model'],y_mean['y'],linestyle='--',linewidth=3
+                ,label=r'x='+'{0:.2f}'.format(reference['x'])+'m,h='+'{0:.2f}'.format(reference['h'])+'m'+r'm,$\alpha$='+'{0:.2f}'.format(reference['alpha'])+r',r='+'{0:.2f}'.format(reference['r']))
         
-    plt.subplot(2,4,cont+4)
-    
-    y_mean = gp.predict(model,fit_features,features,QoI)
-    y_mean['y'] = y_mean['y']/(y_mean['y'].max())
-    
-    if QoI == 'u':
-        y_mean['y_model'] = y_mean['y_model']*Uscaling
-        y_mean['y_std'] = y_mean['y_std']*Uscaling
-    
-    if (QoI in header):
-        plt.plot(ref_abl[QoI],ref_abl['y']*yref,color='tab:red',label='Target',linewidth=3)
-        plt.fill_betweenx(ref_abl['y']*yref, ref_abl[QoI]*0.9, ref_abl[QoI]*1.1, color='tab:red', alpha=0.2,label=r'Reference $\pm$10%')
+        if QoI in header:
+            max_x = np.ceil((1.2*max([np.max(ref_abl[QoI]),np.max(y_mean['y_model'])])*10000).astype(int))/10000
+        else:
+            max_x = np.ceil(1.2*np.max(y_mean['y_model'])*10000).astype(int)/10000
+            
+        if uncertainty == True:
+            plt.fill_betweenx(y_mean['y'], y_mean['y_model']-2*y_mean['y_std'], y_mean['y_model']+2*y_mean['y_std'], color=line[0].get_color(), alpha=0.2)
         
-    line = plt.plot(y_mean['y_model'],y_mean['y'],linestyle='--',linewidth=3
-            ,label=r'x='+'{0:.2f}'.format(reference['x'])+'m,h='+'{0:.2f}'.format(reference['h'])+'m'+r'm,$\alpha$='+'{0:.2f}'.format(reference['alpha'])+r',r='+'{0:.2f}'.format(reference['r']))
-    
-    if QoI in header:
-        max_x = np.ceil((1.2*max([np.max(ref_abl[QoI]),np.max(y_mean['y_model'])])*10000).astype(int))/10000
-    else:
-        max_x = np.ceil(1.2*np.max(y_mean['y_model'])*10000).astype(int)/10000
         
-    if uncertainty == True:
-        plt.fill_betweenx(y_mean['y'], y_mean['y_model']-2*y_mean['y_std'], y_mean['y_model']+2*y_mean['y_std'], color=line[0].get_color(), alpha=0.2)
-    
-    
-    plt.xlim(0,1.1*max_x)
-    plt.xlabel(QoI)
-    
-    if QoI=='u'or QoI == 'Iv':
-        plt.ylabel('y[m]')
-    else:
-        plt.gca().set_yticklabels([])
-    
-    cont +=1
+        #plt.xlim(0,1.1*max_x)
+        plt.xlabel(QoI)
+        
+        plt.ylim(0,1)
+        plt.yticks([0.25,0.5,0.75,1.0])
+        
+        if QoI=='u'or QoI == 'Iv':
+            plt.ylabel('y/H')
+        else:
+            plt.gca().set_yticklabels([])
+            
+        plt.subplot(2,4,cont+4)
+        
+        y_mean = gp.predict(model,fit_features,features,QoI)
+        y_mean['y'] = y_mean['y']/(y_mean['y'].max())
+        
+        if QoI == 'u':
+            y_mean['y_model'] = y_mean['y_model']*Uscaling
+            y_mean['y_std'] = y_mean['y_std']*Uscaling
+        
+        if (QoI in header):
+            plt.plot(ref_abl[QoI],ref_abl['y']*yref,color='tab:red',label='Target',linewidth=3)
+            plt.fill_betweenx(ref_abl['y']*yref, ref_abl[QoI]*0.9, ref_abl[QoI]*1.1, color='tab:red', alpha=0.2,label=r'Reference $\pm$10%')
+            
+        line = plt.plot(y_mean['y_model'],y_mean['y'],linestyle='--',linewidth=3
+                ,label=r'x='+'{0:.2f}'.format(reference['x'])+'m,h='+'{0:.2f}'.format(reference['h'])+'m'+r'm,$\alpha$='+'{0:.2f}'.format(reference['alpha'])+r',r='+'{0:.2f}'.format(reference['r']))
+        
+        if QoI in header:
+            max_x = np.ceil((1.2*max([np.max(ref_abl[QoI]),np.max(y_mean['y_model'])])*10000).astype(int))/10000
+        else:
+            max_x = np.ceil(1.2*np.max(y_mean['y_model'])*10000).astype(int)/10000
+            
+        if uncertainty == True:
+            plt.fill_betweenx(y_mean['y'], y_mean['y_model']-2*y_mean['y_std'], y_mean['y_model']+2*y_mean['y_std'], color=line[0].get_color(), alpha=0.2)
+        
+        
+        plt.xlim(0,1.1*max_x)
+        plt.xlabel(QoI)
+        
+        if QoI=='u'or QoI == 'Iv':
+            plt.ylabel('y[m]')
+        else:
+            plt.gca().set_yticklabels([])
+        
+        cont +=1
 
-plt.suptitle('Chosen setup, dimension vs adimensional y')
+    plt.suptitle('Chosen setup, dimension vs adimensional y')
 
-plt.legend(frameon=False)
-plt.savefig('TestCases/'+reference['fName']+'.png', bbox_inches='tight')
-plt.show()
-plt.close('all')
+    plt.legend(frameon=False)
+    plt.savefig('TestCases/'+reference['fName']+'.png', bbox_inches='tight')
+    plt.show()
+    plt.close('all')
 
 yMax = 1.5
 
@@ -237,7 +256,8 @@ for x in [-4.95,-2.85]:
     fit_features['r'] = reference['r']
         
     outputDF['x'] = np.ones((len(fit_features['y'].to_numpy()),))*x
-    outputDF['y'] = fit_features['y'].to_numpy()*yMax*reference['alpha']/yref
+    outputDF['y'] = fit_features['y'].to_numpy()*yMax*scaling
+    #outputDF['y'] = fit_features['y'].to_numpy()*yMax*reference['alpha']/yref
     outputDF['z'] = np.zeros((len(fit_features['y'].to_numpy()),))
     outputDF['y-velocity'] = np.zeros((len(fit_features['y'].to_numpy()),))
     outputDF['z-velocity'] = np.zeros((len(fit_features['y'].to_numpy()),))
@@ -254,8 +274,8 @@ for x in [-4.95,-2.85]:
         y_mean['y'] = y_mean['y']/(y_mean['y'].max())
         
         if QoI == 'u':
-            y_mean['y_model'] = y_mean['y_model']/(y_mean['y_model'].iloc[-1])*Uscaling
-            y_mean['y_std'] = y_mean['y_std']/(y_mean['y_model'].iloc[-1])*Uscaling
+            y_mean['y_model'] = y_mean['y_model']*Uscaling
+            y_mean['y_std'] = y_mean['y_std']*Uscaling
         else:
             y_mean['y_model'] = y_mean['y_model']*Uscaling*Uscaling
             y_mean['y_std'] = y_mean['y_std']*Uscaling*Uscaling
@@ -299,7 +319,7 @@ for x in [-4.95,-2.85]:
         
         cont +=1
     
-    outputDF['y'] = outputDF['y']*scaling
+    outputDF['y'] = outputDF['y']
     outputDF[['x','y','z','x-velocity','y-velocity','z-velocity','uu-reynolds-stress','vv-reynolds-stress','ww-reynolds-stress','uv-reynolds-stress','uw-reynolds-stress','vw-reynolds-stress']].to_csv(caseDirectory+'/'+reference['fName']+'_'+lab+'.txt',sep='\t',index=False)
 
 plt.suptitle('Chosen setup')
