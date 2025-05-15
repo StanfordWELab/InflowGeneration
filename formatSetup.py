@@ -80,7 +80,7 @@ for h in [0.04,0.06,0.08,0.12,0.14,0.16]:
         
             pfx = f"{x:.1f}".replace('.', 'p')
             
-            directory = '../../TIGTestMatrixLong/PFh'+'{0:.2f}'.format(h)+'u15r'+'{0:.0f}'.format(r)+'/'
+            directory ='../../TIGTestMatrixLong/PFh'+'{0:.2f}'.format(h)+'u15r'+'{0:.0f}'.format(r)+'/'
 
             temp['x-velocity']           = np.loadtxt(directory+pfx+'_avg_u.00075000.collapse_width.dat',skiprows = 3)[:,5]
             temp['x-velocity-magnitude'] = np.loadtxt(directory+pfx+'_mag_u.00075000.collapse_width.dat',skiprows = 3)[:,5]
