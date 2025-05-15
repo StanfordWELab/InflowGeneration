@@ -10,6 +10,18 @@ from sklearn.gaussian_process.kernels import RBF, Matern, RationalQuadratic, Dot
 from scipy.interpolate import interp1d
 from modelDefinition import *
 
+# Define a function that processes each group
+def RMSE_compute(group):
+    
+    all_les = np.concatenate(group['LES'].values)
+    all_gpr = np.concatenate(group['GPR'].values)
+    print()
+    
+    return pd.Series({'RMSE': np.sqrt(np.sum((all_les-all_gpr)**2) / len(all_les))})
+
+###########################################################
+
+
 colors  = {'0.03':['tab:cyan',(0,(3,5,3,5))]
           ,'0.04':['tab:cyan',(0,(3,1,1,1,1,1))]
           ,'0.05':['tab:cyan',(0,(5,1))]
@@ -42,13 +54,15 @@ if __name__ == '__main__':
     devPairs = np.array([[0.06,57],[0.06,87],[0.14,67],[0.14,77]])
     testPairs = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
 
-    QoIs = ['u','Iu','Iv','Iw']
-    testID = 'intensities'
+    #QoIs = ['u','Iu','Iv','Iw']
+    #testID = 'intensities_high_noA'
     
-    #QoIs = ['u','uu','vv','ww','uv']
-    #testID = 'inflow_stresses'
+    QoIs = ['u','uu','vv','ww','uv']
+    testID = 'inflow_stresses'
 
     setToPlot = 'Test'
+
+    yMax= 1.5
 
     ###########################################################
 
@@ -66,8 +80,6 @@ if __name__ == '__main__':
 
     if mode == 'Gridsearch':
 
-        yMax= 1.0
-
         for x in xModels:
             
             trainPoints = {'h':trainPairs[:,0],'r':trainPairs[:,1],'x':[x]}
@@ -79,7 +91,7 @@ if __name__ == '__main__':
 
             for QoI in QoIs:
 
-                gp = gaussianProcess(trainPoints, devPoints, testPoints, yMax, PFDatabase, np.linspace(0.01,1.0,100))
+                gp = gaussianProcess(trainPoints, devPoints, testPoints, yMax, PFDatabase, np.linspace(0.01,1.0,150))
                 
                 try:
                     os.mkdir('../GPRModels/'+directory+'_'+QoI)
@@ -99,8 +111,6 @@ if __name__ == '__main__':
     elif mode == 'Inflow':
         
         print('here')
-
-        yMax= 1.5
 
         for x in xModels:
             
@@ -132,8 +142,6 @@ if __name__ == '__main__':
 
 
     elif mode == 'Plot':
-
-        yMax= 1.0
 
         for x in xModels:
 
@@ -213,3 +221,62 @@ if __name__ == '__main__':
             plt.savefig('../RegressionPlots/'+prefix+testID+'_'+setToPlot+'.png', bbox_inches='tight')
             plt.show()
             plt.close('all')
+            
+    ###############################
+    
+    elif mode == 'Write':
+
+        allPairs = np.concatenate([trainPairs,devPairs,testPairs],axis=0)
+
+        varList = ['x']+features+QoIs
+
+        for x in xModels:
+                    
+            prefix = str(str(x)+'_').replace('.','p')
+            
+            DF = pd.DataFrame(columns=varList)
+                            
+            for h,r in allPairs:
+                
+                datapoint = loadData([h], [x], [r], yMax, PFDatabase, 15.0, np.linspace(0.01,1.0,150))[varList]
+                datapoint['y'] = datapoint['y']*yMax
+                datapoint['u'] = datapoint['u']*15.0
+                DF = pd.concat([DF, datapoint[varList]], ignore_index=True)
+                
+            DF.rename(columns={col: col + ' LES' for col in QoIs}, inplace=True)
+
+            for QoI in QoIs:
+                
+                trainPoints = {'h':trainPairs[:,0],'r':trainPairs[:,1],'x':[x]}
+                devPoints = {'h':devPairs[:,0],'r':devPairs[:,1],'x':[x]}
+                testPoints = {'h':testPairs[:,0],'r':testPairs[:,1],'x':[x]}
+                
+                gp = gaussianProcess(trainPoints, devPoints, testPoints, yMax, PFDatabase, np.linspace(0.01,1.0,150))
+                
+                DF_instance = pd.DataFrame(columns=['x']+features)
+                predictions = []
+                            
+                for h,r in allPairs:
+                    
+                    datapoint = loadData([h], [x], [r], yMax, PFDatabase, 15.0, np.linspace(0.01,1.0,150))[varList]
+                    directory = prefix+testID+'_'+QoI
+                    
+                    model = '../GPRModels/'+directory+'.pkl'
+                    
+                    y_GPR = gp.predict(model,datapoint,features,QoI)
+                    
+                    if QoI == 'u':
+                        predictions = predictions + (y_GPR['y_model']*15.0).to_list()
+                    else:
+                        predictions = predictions + y_GPR['y_model'].to_list()
+                
+                DF[QoI+' GPR'] = predictions
+                        
+            DF.to_csv('Predictions/'+prefix+testID+'.csv',index=False)
+                
+                
+                
+                
+                
+                
+                

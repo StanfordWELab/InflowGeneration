@@ -64,9 +64,9 @@ if __name__ == '__main__':
     #fNames = ['testABL']
     #fNames = ['TPU_ABL']
     #fNames = ['themisABL','inflowProfile_U10_Cat1_1uu1vv1ww','inflowProfile_U10_Cat2_1uu1vv1ww','inflowProfile_U10_Cat3_1uu1vv1ww','inflowProfile_U10_Cat4_1uu1vv1ww']
-    fNames = ['MRB_Cat4']
+    fNames = ['MRB_Cat_B']
     #fNames = ['inflowProfile_U10_Cat1_1uu1vv1ww','inflowProfile_U10_Cat2_1uu1vv1ww','inflowProfile_U10_Cat3_1uu1vv1ww','inflowProfile_U10_Cat4_1uu1vv1ww']
-    #fNames = ['inflowProfile_Cat2_1uu1vv1ww','inflowProfile_Cat3_1uu1vv1ww']
+    #fNames = ['inflowProfile_Cat2_1uu1vv1ww','inflowProfile_Cat3_1uu1vv1ww']y
     #fNames = ['TPU_highrise_14_middle']
 
     ##### Define these variables for Optimize-Gridsearch ####
@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
 
     #### Define these variables for Optimize-NSGA ####
-    xList = [0.3,0.6,0.9,1.2,1.5,1.8,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]
+    xList = [0.6,0.9,1.2,1.5,1.8,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]
     variables = {r'$h$':[0.035,0.1649],r'$r$':[51.5,92.49],r'$\alpha$':[0.3,0.7],r'$k$':[0.8,1.8],r'$x$':[-0.49,len(xList)-0.51]}
     #xList = [0.9]
     #variables = {r'$h$':[0.06,0.06],r'$r$':[82,92],r'$\alpha$':[0.4,0.4],r'$k$':[0.8,2.0],r'$x$':[-0.49,len(xList)-0.51]}
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     #### metric is 'RMSE' or 'RMSE relative'
     metric = 'RMSE'
     uncertainty = False
-    testID = 'intensities'
+    testID = 'intensities_high'
     nCpu = 12
 
     targetQoIs = ['u','Iu','Iv','Iw']
@@ -109,7 +109,7 @@ if __name__ == '__main__':
     features = ['y','h','r']
     varNames = [r'$h$',r'$r$',r'$\alpha$',r'$k$',r'$x$']
 
-    yMax= 1.0
+    yMax= 1.5
 
     hTrain = [0.04,0.08,0.12,0.16]
     rTrain = [52,62,72,82,92]

@@ -21,11 +21,18 @@ PFDatabase = './GPRDatabase'
               #,'../../CatherineABLs/LRB_Cat1_geometric_1to1/': [r'$U_{\infty}=15m/s$, 1to1', [25000,100000],'tab:purple',21.428572*0.42]
               #,'../../TIGTestMatrixLong/PFh0.06u15r57/':[r'Reference r=57',[25000,75000],'tab:grey',0.42]}
 
-directories = {'../../CatherineABLs/LRB_Cat1_geometric_1to50/':[r'$U_{\infty}=15m/s$, 1to50',[25000,100000],'tab:orange',0.42857143*0.42]
-              ,'../../CatherineABLs/LRB_Cat1_geometric_1to21/':[r'$U_{\infty}=15m/s$, 1to21',[25000,100000],'tab:blue',1.0*0.42]
-              ,'../../CatherineABLs/LRB_Cat1_geometric_1to10/': [r'$U_{\infty}=15m/s$,1to10', [25000,100000],'tab:cyan',2.1428572*0.42]
-              ,'../../CatherineABLs/LRB_Cat1_geometric_1to1/': [r'$U_{\infty}=15m/s$, 1to1', [25000,100000],'tab:purple',21.428572*0.42]}
-reference = {'fName':'LRB_Cat1','h':0.06,'r':54,'alpha':0.42,'k':1.35,'x':3.3,'hMatch':0.666}
+#directories = {'../../CatherineABLs/LRB_Cat1_geometric_1to50/':[r'$U_{\infty}=15m/s$, 1to50',[25000,100000],'tab:orange',0.42857143*0.42]
+              #,'../../CatherineABLs/LRB_Cat1_geometric_1to21/':[r'$U_{\infty}=15m/s$, 1to21',[25000,100000],'tab:blue',1.0*0.42]
+              #,'../../CatherineABLs/LRB_Cat1_geometric_1to10/': [r'$U_{\infty}=15m/s$,1to10', [25000,100000],'tab:cyan',2.1428572*0.42]
+              #,'../../CatherineABLs/LRB_Cat1_geometric_1to1/': [r'$U_{\infty}=15m/s$, 1to1', [25000,100000],'tab:purple',21.428572*0.42]}
+#reference = {'fName':'LRB_Cat1','h':0.06,'r':54,'alpha':0.42,'k':1.35,'x':3.3,'hMatch':0.666}
+
+directories = {'../../CatherineABLs/MRB_Cat2_geometric_1to1/': [r'$U_{\infty}=15m/s$,1to1', [25000,100000],'tab:cyan',71.428571*0.42]
+              ,'../../CatherineABLs/MRB_Cat2_geometric_1to10/': [r'$U_{\infty}=15m/s$, 1to10', [25000,100000],'tab:purple',7.1428571*0.42]
+              ,'../../CatherineABLs/MRB_Cat2_geometric_1to25/': [r'$U_{\infty}=15m/s$, 1to25', [25000,100000],'tab:blue',2.85714284*0.42]
+              ,'../../CatherineABLs/MRB_Cat2_geometric_1to50/': [r'$U_{\infty}=15m/s$, 1to50', [25000,100000],'tab:orange',1.42857142*0.42]
+              ,'../../CatherineABLs/MRB_Cat2_geometric_1to100/': [r'$U_{\infty}=15m/s$, 1to100', [25000,100000],'tab:brown',0.71428571*0.42]}
+reference = {'fName':'MRB_Cat2','h':0.04,'r':92,'alpha':0.42,'k':1.47,'x':3.0,'hMatch':0.666}
 
 
 
@@ -33,7 +40,7 @@ reference = {'fName':'LRB_Cat1','h':0.06,'r':54,'alpha':0.42,'k':1.35,'x':3.3,'h
 #directories = {'../../InflowValidation/ThemisShortPFh0.06u15r87/':[r'$U_{\infty}=26m/s$',[25000,75000],'tab:blue',1.0]}
 #reference = {'fName':'themisABL','h':0.06,'r':87,'alpha':0.4,'x':0.9,'hMatch':0.714}
 ##prefix = '0p9_'
-yMax = 0.42
+yMax = 0.42*1.5
 
 #yMax = 0.9
 adimensional = True
@@ -163,4 +170,4 @@ for QoI in ['u','Iu','Iv','Iw']:
     
 plt.legend()
 plt.savefig('../RegressionPlots/AllQoIs.png', bbox_inches='tight')
-plt.show()
+# plt.show()

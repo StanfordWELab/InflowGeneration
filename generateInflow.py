@@ -54,19 +54,30 @@ PFDatabase = './GPRDatabase'
 #reference = {'fName':'LRB_Cat2'
              #,'h':0.04,'r':89,'alpha':0.23,'k':1.75,'x':0.6,'hMatch':0.666}
 
-#### LRB Cat2 ####
-fName = 'MRB_Cat2'
-reference = {'fName':'MRB_Cat2'
-             ,'h':0.04,'r':92,'alpha':0.42,'k':1.47,'x':3.0,'hMatch':0.666}
+##### MRB Cat2 ####
+#fName = 'MRB_Cat2'
+#reference = {'fName':'MRB_Cat2'
+             #,'h':0.04,'r':92,'alpha':0.42,'k':1.47,'x':3.0,'hMatch':0.666}
 
-scale = 1.0/1.0
+
+##### HRB Cat2 ####
+#fName = 'HRB_Cat4'
+#reference = {'fName':'HRB_Cat4'
+             #,'h':0.05,'r':52,'alpha':0.25,'k':1.52,'x':0.6,'hMatch':0.666}
+
+#### Frank Cat_4 ####
+fName = 'BL-1_0_alpha'
+reference = {'fName':'BL-1_0_alpha'
+             ,'h':0.13,'r':91,'alpha':0.61,'k':1.48,'x':4.0,'hMatch':0.666}
+
+scale = 1.0/100.0
 #scale = 1.0/21.42857142857111
-HABL = 30.0
+HABL = 240.0
 
 scaling = HABL*scale/reference['alpha']
 caseDirectory = './'+reference['fName']+'_geometric_1to'+str(np.round(1.0/scale).astype(int))
 
-plotABL = False
+plotABL = True
 
 ########################################################
 

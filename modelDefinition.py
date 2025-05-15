@@ -699,8 +699,8 @@ class generateCase:
 
         x0 = (self.lBox+0.5*self.spacing)*self.scaling
         x1 = x0+self.lFetch*self.scaling
-        z0 = -0.5*self.wDomain*self.scaling
-        z1 =  0.5*self.wDomain*self.scaling
+        z0 = -0.5*5*self.wDomain*self.scaling
+        z1 =  0.5*5*self.wDomain*self.scaling
 
         Cd = 100.0
         spacing = [self.spacing*self.scaling, self.spacing*self.scaling]
