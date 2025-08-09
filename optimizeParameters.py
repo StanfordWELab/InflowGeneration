@@ -109,7 +109,7 @@ if __name__ == '__main__':
     features = ['y','h','r']
     varNames = [r'$h$',r'$r$',r'$\alpha$',r'$k$',r'$x$']
 
-    yMax= 1.5
+    yMax= 1.0
 
     hTrain = [0.04,0.08,0.12,0.16]
     rTrain = [52,62,72,82,92]
