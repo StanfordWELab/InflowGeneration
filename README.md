@@ -10,7 +10,9 @@
 - [Introduction](#introduction)  
 - [Features](#features)
 - [Project Structure](#project-structure)
-- [GPR Model](#usage)  
+- [GPR Model](#GPRMode)  
+- [Inflow optimization](#inflow-optimization) 
+- [Domain generation](#domain-generation)  
 
 ---
 
@@ -73,3 +75,35 @@ At this point, you can plot the predictions of the best models on the train, and
 `python3.9 fitModel.py '[x1,x2,x3]' Plot`
 
 To visualize either the Test set or the Dev set predictions, you need to define setToPlot = 'Dev' or setToPlot = 'Test', respectively. 
+
+---
+
+## ​ Inflow optimization
+
+To find the optimal inflow parameter setup required to represent a target ABL, you need to run the `optimizeParameters.py` script with the command
+
+`python3.9 fitModel.py mode`
+
+where mode can be 'Optimize-Gridsearch','Optimize-NSGA','Plot-Gridsearch','Plot-NSGA', or 'Plot-Setup'.
+
+First, you need to run the script with the `Optimize-NSGA` option. To do so, you need to first add the target abl (let's say it's called fName.dat) in the TestCases folder and then modify the fNames variable to reflect the file identifier (e.g. fName.dat). I suggest specfying the target ABL for y in [0.25H;1.5H], where H is the building height. At this point, you need to modify testID to reflect your model name choice, the target QoIs, and the number of CPU you want to use during the optimization (e.g. 128 on sherlock). The optimization will generate two .csv files, namely fName_decision_variables.csv and fName_pareto_front.csv which contains the decision variable values and the RMSE of the optimal solution with respect to the target value for the QoIs, respectively.
+
+At this point, you can look at the output of the optimization by running
+
+`python3.9 fitModel.py Plot-NSGA`
+
+to look at the parallel coordinate plots of the Pareto front (useful only the first few times you run the optimization), or
+
+`python3.9 fitModel.py Plot-Setup`
+
+to look at specific solutions (seeds) on the pareto front. This will generate a single plot that compares multiple optimal solutions with the target value for the QoIs. 
+
+---
+
+## ​ Domain Generation
+
+Once the optimization is over, you can use the `generateInflow.py` script. Here, you need to define the fName of the target ABL, the optimal h, r, alpha, k, and x values, the scale of the building with respect to the full scale case, and HABL, which is the maximum height specified in the fName file with the target ABL. As discussed in the Inflow optimization section, this HABL should be 1.5 times the height of the full-scale building. You also need to specify the testID of the models fitted on the upstream and the downstream databases. After running the script with the command
+
+`python3.9 generateInflow.py`
+
+you will see a new folder called 'fName_geoemtric_1toXXX' where XXX is the scale you defined. This folder will contain an .sbin charles domain ready to be meshed with pointcloud probes. You can use this domain to verify the optimizations results.
