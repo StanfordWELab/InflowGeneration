@@ -54,13 +54,9 @@ This repository contains tools for **generating target inflow profiles** for **c
 
 ## ​ GPR Model
 
-Scripts `fitModel.py` and `resultsToDatabase.py` can be used to perform the GPR model hyperparameters tuning. You need to run the scripts two times. One to fit the GPR model on the upstream database (inflow generator inputs), and one to fit the downstream database (target ABLs). The syntax to run the script is
+Scripts `fitModel.py` and `resultsToDatabase.py` can be used to perform the GPR model hyperparameters tuning. You need to run the script at least two times. One to fit the GPR model on the upstream database (inflow generator inputs), and one to fit the downstream database (target ABLs). The syntax to run the scripts is 
 
-You can get started quickly:
+`python3.9 fitModel.py '[x1,x2,x3]' setToFit`
 
-```bash
-git clone https://github.com/mattiafc/InflowGeneration.git
-cd InflowGeneration
-pip install -r requirements.txt  # (Assuming there's a requirements file)```
+where 
 
-where
