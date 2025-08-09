@@ -56,6 +56,9 @@ At this point, you can plot the predictions of the best models on the train, and
 
 To visualize either the Test set or the Dev set predictions, you need to define setToPlot = 'Dev' or setToPlot = 'Test', respectively. 
 
+You can find many models I tested on Sherlock in the /oak/stanford/groups/gorle/mattiafc/GPRModels folder. The best upstream database model TestID is 
+`intensities`, while the best downstream database model TestID is `inflow_stresses`.
+
 ---
 
 ## ​ Inflow optimization
