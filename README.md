@@ -35,22 +35,25 @@ This repository contains tools for **generating target inflow profiles** for **c
 ---
 
 ## ​ Project Structure
-├── GPRModels
-├── RegressionPlots
-├── InflowGeneration/
-├──── codeABLs.py
-├──── formatSetup.py
-├──── generateInflow.py
-├──── modelDefinition.py
-├──── optimizeParameters.py
-├──── paperPlots.py
-├──── resultsToDatabase.py
-├──── verifyInflow.py
-├──── ASCEMattia.py
-├──── GPRDatabase/
-├──── Predictions/
-├──── TestCases/
-└── *.mat
+
+
+```text
+
+├── 📂 GPRModels/                # Gaussian Process Regression model scripts
+├── 📂 RegressionPlots/          # Scripts & notebooks for regression result plots
+├── 📂 InflowGeneration/         # Main package for inflow generation
+│   ├── 📄 codeABLs.py            # Atmospheric boundary layer helper functions
+│   ├── 📄 formatSetup.py         # Prepares and formats input setup files
+│   ├── 📄 generateInflow.py      # Generates inflow profiles
+│   ├── 📄 modelDefinition.py     # Defines inflow model parameters
+│   ├── 📄 optimizeParameters.py  # Tunes model parameters for best fit
+│   ├── 📄 paperPlots.py          # Creates publication-ready plots
+│   ├── 📄 resultsToDatabase.py   # Exports results to database format
+│   ├── 📄 verifyInflow.py        # Verifies inflow profiles against targets
+│   ├── 📄 ASCEMattia.py          # ASCE-specific configuration utilities
+│   ├── 📂 GPRDatabase/           # Data for Gaussian Process Regression
+│   ├── 📂 Predictions/           # Generated model predictions
+│   └── 📂 TestCases/             # Example input test cases
 
 ---
 
