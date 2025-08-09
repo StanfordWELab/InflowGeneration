@@ -9,10 +9,10 @@
 
 - [Introduction](#introduction)  
 - [Features](#features)
-- [Project Structure](#project-structure)
 - [GPR Model](#GPRMode)  
 - [Inflow optimization](#inflow-optimization) 
 - [Domain generation](#domain-generation)  
+- [Project Structure](#project-structure)
 
 ---
 
@@ -31,29 +31,6 @@ This repository contains tools for **generating target inflow profiles** for **c
   - Gaussian process regression models hyperparameters tuning (`fitModel.py`,`resultsToDatabase.py`)
   - Optimizing inflow generator inputs to achieve a target ABL (`optimizeParameters.py`)
   - Generate CharLES domain for an ABL simulation  (`resultsToDatabase.py`, `paperPlots.py`)
-
----
-
-## ​ Project Structure
-
-
-```text
-
-├── 📂 GPRModels/                # Gaussian Process Regression model scripts
-├── 📂 RegressionPlots/          # Scripts & notebooks for regression result plots
-├── 📂 InflowGeneration/         # Main package for inflow generation
-│   ├── 📄 codeABLs.py            # Atmospheric boundary layer helper functions
-│   ├── 📄 formatSetup.py         # Prepares and formats input setup files
-│   ├── 📄 generateInflow.py      # Generates inflow profiles
-│   ├── 📄 modelDefinition.py     # Defines inflow model parameters
-│   ├── 📄 optimizeParameters.py  # Tunes model parameters for best fit
-│   ├── 📄 paperPlots.py          # Creates publication-ready plots
-│   ├── 📄 resultsToDatabase.py   # Exports results to database format
-│   ├── 📄 verifyInflow.py        # Verifies inflow profiles against targets
-│   ├── 📄 ASCEMattia.py          # ASCE-specific configuration utilities
-│   ├── 📂 GPRDatabase/           # Data for Gaussian Process Regression
-│   ├── 📂 Predictions/           # Generated model predictions
-│   └── 📂 TestCases/             # Example input test cases
 
 ---
 
@@ -110,3 +87,25 @@ Once the optimization is over, you can use the `generateInflow.py` script. Here,
 `python3.9 generateInflow.py`
 
 you will see a new folder called 'fName_geoemtric_1toXXX' where XXX is the scale you defined. This folder will contain an .sbin charles domain ready to be meshed with pointcloud probes. You can use this domain to verify the optimizations results.
+
+---
+
+## ​ Project Structure
+
+
+```
+├── 📂 GPRModels/                # Gaussian Process Regression model scripts
+├── 📂 RegressionPlots/          # Scripts & notebooks for regression result plots
+├── 📂 InflowGeneration/         # Main package for inflow generation
+│   ├── 📄 codeABLs.py            # Atmospheric boundary layer helper functions
+│   ├── 📄 formatSetup.py         # Prepares and formats input setup files
+│   ├── 📄 generateInflow.py      # Generates inflow profiles
+│   ├── 📄 modelDefinition.py     # Defines inflow model parameters
+│   ├── 📄 optimizeParameters.py  # Tunes model parameters for best fit
+│   ├── 📄 paperPlots.py          # Creates publication-ready plots
+│   ├── 📄 resultsToDatabase.py   # Exports results to database format
+│   ├── 📄 verifyInflow.py        # Verifies inflow profiles against targets
+│   ├── 📄 ASCEMattia.py          # ASCE-specific configuration utilities
+│   ├── 📂 GPRDatabase/           # Data for Gaussian Process Regression
+│   ├── 📂 Predictions/           # Generated model predictions
+│   └── 📂 TestCases/             # Example input test cases
