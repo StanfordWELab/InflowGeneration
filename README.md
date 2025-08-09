@@ -58,5 +58,5 @@ Scripts `fitModel.py` and `resultsToDatabase.py` can be used to perform the GPR 
 
 `python3.9 fitModel.py '[x1,x2,x3]' setToFit`
 
-where 
+where x1,x2,x3 are the x locations at which you want to fit the model (read the paper for more info), while setToFit can be Gridsearch, Inflow, or Plot. Gridsearch fits the downstream database for y in [0;1m], while Inflow fits the upstream database for y in [0;1.5m]. I'll focus on the Plot option later.
 
