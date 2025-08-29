@@ -211,7 +211,7 @@ def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs, indices, 
         
         plt.ylabel('RMSE')
             
-        cbar=plt.colorbar(sm)
+        cbar=plt.colorbar(sm, ax=plt.gca())
         #cbar.set_label(decisionVars[cont])
         
         for x in xPlot:
