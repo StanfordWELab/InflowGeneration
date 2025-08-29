@@ -20,6 +20,8 @@
 
 This repository contains tools for **generating target inflow profiles** for **computational wind engineering** purposes.
 
+For running CharLES, you on need to do the inflow optimaization and domain generation. For other solvers, need to run the full thing (fit GPR models).
+
 ---
 
 ## ​ Features
@@ -57,7 +59,7 @@ At this point, you can plot the predictions of the best models on the train, and
 To visualize either the Test set or the Dev set predictions, you need to define setToPlot = 'Dev' or setToPlot = 'Test', respectively. 
 
 You can find many models I tested on Sherlock in the /oak/stanford/groups/gorle/mattiafc/GPRModels folder. The best upstream database model TestID is 
-`intensities`, while the best downstream database model TestID is `inflow_stresses`.
+`inflow_stresses`, while the best downstream database model TestID is `intensities`.
 
 ---
 
