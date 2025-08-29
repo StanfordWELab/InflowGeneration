@@ -87,7 +87,9 @@ to look at specific solutions (seeds) on the pareto front. This will generate a 
 
 ## ​ Domain Generation
 
-Once the optimization is over, you can use the `generateInflow.py` script. Here, you need to define the fName of the target ABL, the optimal h, r, alpha, k, and x values, the scale of the building with respect to the full scale case, and HABL, which is the maximum height specified in the fName file with the target ABL. As discussed in the Inflow optimization section, this HABL should be 1.5 times the height of the full-scale building. You also need to specify the testID of the models fitted on the upstream and the downstream databases. After running the script with the command
+Once the optimization is over, you can use the `generateInflow.py` script. Here, you need to define the fName of the target ABL, the optimal h, r, alpha, k, and x values, the scale of the building with respect to the full scale case, and HABL, which is the maximum height specified in the fName file with the target ABL. As discussed in the Inflow optimization section, this HABL should be 1.5 times the height of the full-scale building. You also need to specify the testID of the models fitted on the upstream and the downstream databases. After running the script with the command. Note that
+- h: height of the roughness elements
+- r: row of roughness elements where inflow boundary condition is sampled
 
 `python3.9 generateInflow.py`
 
