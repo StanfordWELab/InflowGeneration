@@ -231,7 +231,9 @@ def parallelCoordinatesPlot(pyMooResults, xValues, decisionVars, QoIs, indices, 
         cont+=1
         
     plt.axis('tight')
-    plt.savefig('TestCases/'+case+'_PCP.png', bbox_inches='tight')
+    save_path = 'TestCases/'+case+'_PCP.png'
+    print(f"Saving parallel coordinates plot to {save_path}")
+    plt.savefig(save_path, bbox_inches='tight')
     plt.show()
     
 def plotSetup(trainPairs, devPairs, testPairs, yMax, features, testID, PFDatabase, parameters, ref_abl, QoIs, uncertainty,case):
@@ -312,7 +314,9 @@ def plotSetup(trainPairs, devPairs, testPairs, yMax, features, testID, PFDatabas
     plt.legend(frameon=False)
 
     #plt.savefig('../RegressionPlots/'+fName+'_best.png', bbox_inches='tight')
-    plt.savefig('TestCases/'+case+'_solutions.png', bbox_inches='tight')
+    save_path = 'TestCases/'+case+'_solutions.png'
+    print(f"Saving regression plots to {save_path}")
+    plt.savefig(save_path, bbox_inches='tight')
     plt.show()
     plt.close('all')
     
@@ -612,7 +616,7 @@ class generateCase:
         self.writeStitch()
         self.writeCharlesInput(fName, prerun = False)
         self.writeCharlesInput(fName, prerun = True)
-        os.system('cd '+str(directory)+r' && /home/mattiafc/cascade-inflow/bin/surfer.exe -i surferDomain.in')
+        os.system('cd '+str(directory)+r' && $CTI_CASCADE/bin/surfer.exe -i surferDomain.in')
 
     def writeRect(self, rmin, rMAX, name):
 

@@ -66,9 +66,14 @@ PFDatabase = './GPRDatabase'
              #,'h':0.05,'r':52,'alpha':0.25,'k':1.52,'x':0.6,'hMatch':0.666}
 
 #### Frank Cat_4 ####
-fName = 'BL-1_0_alpha'
-reference = {'fName':'BL-1_0_alpha'
-             ,'h':0.13,'r':91,'alpha':0.61,'k':1.48,'x':4.0,'hMatch':0.666}
+# fName = 'BL-1_0_alpha'
+# reference = {'fName':'BL-1_0_alpha'
+#              ,'h':0.13,'r':91,'alpha':0.61,'k':1.48,'x':4.0,'hMatch':0.666}
+
+##### MRB CatB ####
+fName = 'MRB_Cat_B'
+reference = {'fName':fName
+            ,'h':0.04,'r':92,'alpha':0.42,'k':1.47,'x':3.0,'hMatch':0.666}
 
 scale = 1.0/100.0
 #scale = 1.0/21.42857142857111
