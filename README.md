@@ -14,6 +14,7 @@
 - [Inflow optimization](#inflow-optimization) 
 - [Domain generation](#domain-generation)  
 - [Project Structure](#project-structure)
+- [Select Results](#select-results)
 
 ---
 
@@ -111,6 +112,14 @@ Once the optimization is over, you can use the `generateInflow.py` script. Here,
 `python3.9 generateInflow.py`
 
 you will see a new folder called 'fName_geoemtric_1toXXX' where XXX is the scale you defined. This folder will contain an .sbin charles domain ready to be meshed with pointcloud probes. You can use this domain to verify the optimizations results.
+
+## Select Results
+### ASCE Boundary Layers
+To demonstrate the capabilities of the proposed framework, we use it to replicate ABLs corresponding to 343 ASCE 49-21 terrain categories B, C, and D [46], corresponding to urban/suburban, open, and flat terrain, 344 respectively. These terrain categories are characterized by full-scale roughness heights y0 of 0.3m, 0.02m, and 0.005m, respectively. We adopt a reference wind speed of 12m/s at a height of 10m, ensuring a fully rough 346 surface Reynolds number in accordance with ASCE 49-21 requirements for wind tunnel testing.
+
+![Optimal setups for ASCE profiles](./Images/ASCE%20Optimat%20Setups.png)
+![Comparisons of optimal ASCE setups with ASCE profiles](./Images/ASCE%20Comparisons.png)
+
 
 ---
 
