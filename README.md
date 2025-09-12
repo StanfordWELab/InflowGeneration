@@ -9,6 +9,7 @@
 
 - [Introduction](#introduction)  
 - [Features](#features)
+- [Symbols](#symbols)
 - [GPR Model](#GPRMode)  
 - [Inflow optimization](#inflow-optimization) 
 - [Domain generation](#domain-generation)  
@@ -50,6 +51,7 @@ For running CharLES, you on need to do the inflow optimaization and domain gener
 
 
 ## ​ GPR Model
+![Simulation Domain](./Images/Simulation%20Domains.png)
 
 Scripts `fitModel.py` and `resultsToDatabase.py` can be used to perform the GPR model hyperparameters tuning. You need to run the script at least two times. One to fit the GPR model on the upstream database (inflow generator inputs), and one to fit the downstream database (target ABLs). The syntax to run the scripts is 
 
