@@ -59,6 +59,8 @@ Scripts `fitModel.py` and `resultsToDatabase.py` can be used to perform the GPR 
 
 where x1,x2,x3 are the x locations at which you want to fit the model (read the paper for more info), while setToFit can be Gridsearch, Inflow, or Plot. Gridsearch fits the downstream database for y in [0;1m], while Inflow fits the upstream database for y in [0;1.5m]. I'll focus on the Plot option later.
 
+![Framework](./Images/Framework.png)
+
 To properly run the script, you first need to define the QoIs for the fit (QoIs = ['u','Iu','Iv','Iw'] for Gridsearch, and QoIs = ['u','uu','vv','ww','uv'] for Inflow), yMax (1.0 for Gridsearch and 1.5 for Inflow) and then the TestID, which is the name of the output folder containing the GPR models fitted during the hyperparameter search. Each model is saved as GPRModels/xxx_TestID_QoI/yyy.pkl, where xxx is the x location at which the hyperparameter tuning is performed, QoI is the specific quantity of interest (e.g. uu or Iw), and yyy is the specific model identifier.
 
 Once the gridsearch terminates, the `resultsToDatabase.py` scripts save the models that yields the best predictions on the dev set. The command to run this script is 
