@@ -36,6 +36,19 @@ For running CharLES, you on need to do the inflow optimaization and domain gener
 
 ---
 
+## Symbols
+- $H$ of $H_{Build}: height of building
+- $y$: non-dimensionalized vertical coordinate system.
+  - $y^T$: top of the domain in the paper
+  - $y^{Max}$: new domain height suggested by the GPR model
+    - Note that the building height in the optimized downstream simulation would be $H y^{Max} / y^T$
+- $h$: height of rougness elements
+- $r$: number or roughness elements in upstream simulation
+- alpha: I believe this is the ratio $y^{Max} / y^T$
+- $k$: velocity scaling factor, enabling the profile to be scaled to the target profile. This assumes high reynolds limit.
+- $x$: this is the distance between the last upstream element and the building (or start of buildings)
+
+
 ## ​ GPR Model
 
 Scripts `fitModel.py` and `resultsToDatabase.py` can be used to perform the GPR model hyperparameters tuning. You need to run the script at least two times. One to fit the GPR model on the upstream database (inflow generator inputs), and one to fit the downstream database (target ABLs). The syntax to run the scripts is 
