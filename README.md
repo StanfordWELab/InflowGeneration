@@ -115,7 +115,9 @@ you will see a new folder called 'fName_geoemtric_1toXXX' where XXX is the scale
 
 ## Select Results
 ### ASCE Boundary Layers
-To demonstrate the capabilities of the proposed framework, we use it to replicate ABLs corresponding to 343 ASCE 49-21 terrain categories B, C, and D, corresponding to urban/suburban, open, and flat terrain, 344 respectively. These terrain categories are characterized by full-scale roughness heights y0 of 0.3m, 0.02m, and 0.005m, respectively. We adopt a reference wind speed of 12m/s at a height of 10m, ensuring a fully rough 346 surface Reynolds number in accordance with ASCE 49-21 requirements for wind tunnel testing.
+To demonstrate the capabilities of the proposed framework, we use it to replicate ABLs corresponding to ASCE 49-21 terrain categories B, C, and D, corresponding to urban/suburban, open, and flat terrain, respectively. These terrain categories are characterized by full-scale roughness heights y0 of 0.3m, 0.02m, and 0.005m, respectively. We adopt a reference wind speed of 12m/s at a height of 10m, ensuring a fully rough surface Reynolds number in accordance with ASCE 49-21 requirements for wind tunnel testing.
+
+We consider three buildings with different full-scale heights H: a low-rise building (LRB) with $H = 6m$, a mid-rise building (MRB) with $H = 30m$, and a high-rise building (HRB) with $H = 100m$. For each case, we compute the target ABL velocity and turbulence intensity profiles for y P r0.25H; 1.5Hs. These target profiles are then used as the targets for the optimization procedure. While the framework supports optimization for multiple QoIs, in this Section we focus on the mean velocity and streamwise turbulence intensity as the target variables. We also conducted an optimization using all four QoIs. However, focusing on the mean velocity and streamwise turbulence intensity produced better overall results.
 
 ![Optimal setups for ASCE profiles](./Images/ASCE%20Optimat%20Setups.png)
 ![Comparisons of optimal ASCE setups with ASCE profiles](./Images/ASCE%20Comparisons.png)
