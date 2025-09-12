@@ -37,14 +37,14 @@ For running CharLES, you on need to do the inflow optimaization and domain gener
 ---
 
 ## Symbols
-- $H$ of $H_{Build}: height of building
+- $H$ of $H_{Build}$: height of building
 - $y$: non-dimensionalized vertical coordinate system.
   - $y^T$: top of the domain in the paper
   - $y^{Max}$: new domain height suggested by the GPR model
     - Note that the building height in the optimized downstream simulation would be $H y^{Max} / y^T$
 - $h$: height of rougness elements
 - $r$: number or roughness elements in upstream simulation
-- alpha: I believe this is the ratio $y^{Max} / y^T$
+- $\alpha$: I believe this is the ratio $y^{Max} / y^T$
 - $k$: velocity scaling factor, enabling the profile to be scaled to the target profile. This assumes high reynolds limit.
 - $x$: this is the distance between the last upstream element and the building (or start of buildings)
 
@@ -100,7 +100,7 @@ to look at specific solutions (seeds) on the pareto front. This will generate a 
 
 ## ​ Domain Generation
 
-Once the optimization is over, you can use the `generateInflow.py` script. Here, you need to define the fName of the target ABL, the optimal h, r, alpha, k, and x values, the scale of the building with respect to the full scale case, and HABL, which is the maximum height specified in the fName file with the target ABL. As discussed in the Inflow optimization section, this HABL should be 1.5 times the height of the full-scale building. You also need to specify the testID of the models fitted on the upstream and the downstream databases. After running the script with the command. Note that
+Once the optimization is over, you can use the `generateInflow.py` script. Here, you need to define the fName of the target ABL, the optimal $h$, $r$, $\alpha$, $k$, and $x$ values, the scale of the building with respect to the full scale case, and HABL, which is the maximum height specified in the fName file with the target ABL. As discussed in the Inflow optimization section, this HABL should be 1.5 times the height of the full-scale building. You also need to specify the testID of the models fitted on the upstream and the downstream databases. After running the script with the command. Note that
 - h: height of the roughness elements
 - r: row of roughness elements where inflow boundary condition is sampled
 
