@@ -42,11 +42,10 @@ For running CharLES, you on need to do the inflow optimaization and domain gener
 - $H$ of $H_{Build}$: height of building
 - $y$: non-dimensionalized vertical coordinate system.
   - $y^T$: top of the domain in the paper
-  - $y^{Max}$: new domain height suggested by the GPR model
+  - $y^{Max}$ or $\alpha$: new domain height suggested by the GPR model (called $y^{Max}$ in the paper and alpha in the code)
     - Note that the building height in the optimized downstream simulation would be $H y^{Max} / y^T$
 - $h$: height of rougness elements
 - $r$: number or roughness elements in upstream simulation
-- $\alpha$: I believe this is the ratio $y^{Max} / y^T$
 - $k$: velocity scaling factor, enabling the profile to be scaled to the target profile. This assumes high reynolds limit.
 - $x$: this is the distance between the last upstream element and the building (or start of buildings)
 
