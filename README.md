@@ -85,7 +85,7 @@ You can find many models I tested on Sherlock in the /oak/stanford/groups/gorle/
 
 To find the optimal inflow parameter setup required to represent a target ABL, you need to run the `optimizeParameters.py` script with the command
 
-`python3.9 fitModel.py mode`
+`python3.9 optimizeParameters.py mode`
 
 where mode can be 'Optimize-Gridsearch','Optimize-NSGA','Plot-Gridsearch','Plot-NSGA', or 'Plot-Setup'.
 
@@ -93,11 +93,11 @@ First, you need to run the script with the `Optimize-NSGA` option. To do so, you
 
 At this point, you can look at the output of the optimization by running
 
-`python3.9 fitModel.py Plot-NSGA`
+`python3.9 optimizeParameters.py Plot-NSGA`
 
 to look at the parallel coordinate plots of the Pareto front (useful only the first few times you run the optimization), or
 
-`python3.9 fitModel.py Plot-Setup`
+`python3.9 optimizeParameters.py Plot-Setup`
 
 to look at specific solutions (seeds) on the pareto front. This will generate a single plot that compares multiple optimal solutions with the target value for the QoIs. 
 
