@@ -97,7 +97,7 @@ if __name__ == '__main__':
     #### metric is 'RMSE' or 'RMSE relative'
     metric = 'RMSE'
     uncertainty = False
-    testID = 'intensities_high'
+    testID = 'intensities'
     nCpu = 12
 
     targetQoIs = ['u','Iu','Iv','Iw']
