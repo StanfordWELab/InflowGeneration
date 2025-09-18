@@ -97,6 +97,7 @@ HABL = 9
 scaling = HABL*scale/reference['alpha']
 caseDirectory = './'+reference['fName']+'_geometric_1to'+str(np.round(1.0/scale).astype(int))
 
+generateCase(scaling, reference['h'], reference['x'], caseDirectory, reference['fName'])
 # Toggle plotting of ABL profiles
 plotABL = True
 
@@ -274,7 +275,6 @@ if plotABL:
 yMax = 1.5  
 # redefine yMax to extend the vertical normalization range for inflow generation
 
-generateCase(scaling, reference['h'], reference['x'], caseDirectory, reference['fName'])
 Uscaling = 15  
 # override previously computed Uscaling to a fixed inlet‐velocity scale for case export
         
