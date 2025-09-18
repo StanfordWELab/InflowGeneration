@@ -1,17 +1,24 @@
+# Script to generate inflow profiles using Gaussian Process Regression (GPR)
+# and prepare corresponding case geometry and boundary‐condition files.
+
+# ===== Imports & Library Setup =====
 import os
 import sys
 import joblib
+# Import data processing and plotting libraries
 import pandas as pd
 import numpy as np
 import matplotlib
 from matplotlib import pyplot as plt
+# Import application‐specific GPR and mesh modules
 from modelDefinition import *
 from stl import mesh
-            
-###########################################################
 
+# Path to the precomputed GPR feature database
 PFDatabase = './GPRDatabase'
 
+# ===== Reference Case Configuration =====
+# Reference case setups (multiple options commented out; select one below)
 #### themisABL setup ####
 #reference = {'fName':'themisABL'
             #,'h':0.06,'r':87,'alpha':0.4,'k':1.5,'x':0.9,'hMatch':0.714}
@@ -80,6 +87,8 @@ fName = 'LRB_Cat_B'
 reference = {'fName':fName
             ,'h':0.07,'r':74,'alpha':0.34,'k':1.62,'x':0.6,'hMatch':0.666}
 
+# ===== Scaling Factor Computation =====
+# Compute geometric scaling factors from HABL and reference α
 scale = 1.0/100.0
 #scale = 1.0/21.42857142857111
 #HABL = 240.0
@@ -88,21 +97,27 @@ HABL = 9
 scaling = HABL*scale/reference['alpha']
 caseDirectory = './'+reference['fName']+'_geometric_1to'+str(np.round(1.0/scale).astype(int))
 
+generateCase(scaling, reference['h'], reference['x'], caseDirectory, reference['fName'])
+# Toggle plotting of ABL profiles
 plotABL = True
 
-########################################################
-
+# Define model identifiers for intensity and inflow stress fields
 intensitiesModelID = 'intensities'
 inflowModelID = 'inflow_stresses'
 uncertainty = False
 
+# ===== GPR Feature Preparation =====
+# Specify features used as GPR inputs and build feature DataFrame
 features = ['y','h','r']
 
+# Training x‐locations (defined but not directly used below)
 xList = [0.3,0.6,0.9,1.2,1.5,1.8,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]
 
+# Define arrays of training heights (h) and roughness (r)
 hTrain = [0.04,0.08,0.12,0.16]
 rTrain = [52,62,72,82,92]
 
+# Build the full Cartesian product of training parameter pairs
 devPairs = np.array([[0.06,57],[0.06,87],[0.14,67],[0.14,77]])
 testPairs = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
 
@@ -113,8 +128,10 @@ for hTemp in hTrain:
         trainPairs[cont,:] = [hTemp, rTemp]
         cont+=1
 
+# Set maximum non‐dimensional y for normalization in GPR
 yMax= 1.0
 
+# Prepare DataFrame of features at the reference case for prediction
 fit_features = pd.DataFrame()
 fit_features['y'] = np.linspace(0.01,1.0,2000)
 fit_features['x'] = reference['x']
@@ -123,53 +140,55 @@ fit_features['alpha'] = reference['alpha']
 fit_features['r'] = reference['r']
 fit_features['k'] = reference['k']
 
-trainPoints = {'h':trainPairs[:,0],'r':trainPairs[:,1],'x':[reference['x']]}
+# ===== Assemble Training, Development, and Test Datasets =====
+# Build parameter pairs and pack into dicts for GPR
+# Assemble dictionaries of training, development, and test points
 devPoints = {'h':devPairs[:,0],'r':devPairs[:,1],'x':[reference['x']]}
 testPoints = {'h':testPairs[:,0],'r':testPairs[:,1],'x':[reference['x']]}
+trainPoints = {'h':trainPairs[:,0],'r':trainPairs[:,1],'x':[reference['x']]}
 
+# Initialize the GaussianProcess object with our data sets
 gp = gaussianProcess(trainPoints, devPoints, testPoints, yMax, PFDatabase)
 
-prefix = str(str(reference['x'])+'_').replace('.','p')
-directory = prefix+intensitiesModelID
-    
-ref_abl = pd.read_csv('TestCases/'+reference['fName']+'.dat',sep=',')
-header = list(ref_abl.columns)
-idx = np.argmax(ref_abl['y'].to_numpy())
+# ===== Plot ABL Profiles (if enabled) =====
+if plotABL:
+    # -- Load & normalize reference ABL data (plot only) --
+    prefix   = str(reference['x']).replace('.', 'p') + '_'
+    directory = prefix + intensitiesModelID
+    ref_abl  = pd.read_csv('TestCases/'+reference['fName']+'.dat', sep=',')
+    header   = list(ref_abl.columns)
+    idx      = np.argmax(ref_abl['y'].to_numpy())
+    yref     = ref_abl['y'].iloc[idx]
+    ref_abl['y'] = ref_abl['y'] / yref
 
-yref = ref_abl['y'].iloc[idx]*1.0
+    # -- Initial GPR 'u' prediction to compute Uscaling (plot only) --
+    model    = '../GPRModels/'+directory+'_u.pkl'
+    y_mean   = gp.predict(model, fit_features, features, 'u')
+    y_mean   = y_mean.loc[y_mean['y'] <= reference['alpha'] * y_mean['y'].max()]
+    y_mean['y'] = y_mean['y'] / y_mean['y'].max()
 
-ref_abl['y'] = ref_abl['y']/yref
-ref_abl['u'] = ref_abl['u']
-  
-model = '../GPRModels/'+directory+'_u.pkl'
-y_mean = gp.predict(model,fit_features,features,'u')
-y_mean = y_mean.loc[y_mean['y']<=reference['alpha']*np.max(y_mean['y'])]
-y_mean['y'] = y_mean['y']/(y_mean['y'].max())
-#y_mean['y_model'] = y_mean['y_model']
+    U_ABL_dim = interp1d(ref_abl['y'], ref_abl['u'])(reference['hMatch']).item()
+    U_TIG_dim = interp1d(y_mean['y'],  y_mean['y_model'])(reference['hMatch']).item()
+    Uscaling  = U_ABL_dim / U_TIG_dim * yref / reference['alpha']
 
-U_ABL_dim = (interp1d(ref_abl['y'], ref_abl['u'])(reference['hMatch'])).item()
-U_TIG_dim = (interp1d(y_mean['y'], y_mean['y_model'])(reference['hMatch'])).item()
+    # -- Print scaling summary for the plot --
+    print('Scaling velocity from GPR to reference ABL:', np.round(Uscaling,3), 'm/s')
+    print('Reference velocity at', np.round(reference['hMatch']*yref,3),
+          'm:', np.round(U_ABL_dim,3), 'm/s')
 
-Uscaling = U_ABL_dim/(U_TIG_dim)*yref/reference['alpha']
-
-print('===========================================================================')
-print('Scaling velocity from GPR to reference ABL: '+str(np.round(Uscaling,3))+'m/s')
-print('Reference velocity at '+str(np.round(reference['hMatch']*yref,3))+'m reference ABL height: '+str(np.round(U_ABL_dim,3))+'m/s')
-print('===========================================================================')
-
-if plotABL == True:
-
+    # -- Configure figure and plot profiles --
     my_dpi = 100
     plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
-    cont=1
-
+    cont = 1
     for QoI in ['u','Iu','Iv','Iw']:
+        # Predict each quantity of interest (QoI) with GPR
         model = '../GPRModels/'+directory+'_'+QoI+'.pkl'
         
         y_mean = gp.predict(model,fit_features,features,QoI)
         y_mean = y_mean.loc[y_mean['y']<=reference['alpha']*np.max(y_mean['y'])]
         y_mean['y'] = y_mean['y']/(y_mean['y'].max())
         
+        # Apply appropriate scaling to the predicted profiles
         if QoI == 'u':
             #y_mean['y_model'] = y_mean['y_model']*Uscaling
             #y_mean['y_std'] = y_mean['y_std']*Uscaling
@@ -252,27 +271,29 @@ if plotABL == True:
     plt.show()
     plt.close('all')
 
-yMax = 1.5
+# ===== Generate Geometric Case Files & Inflow Profiles =====
+yMax = 1.5  
+# redefine yMax to extend the vertical normalization range for inflow generation
 
-generateCase(scaling, reference['h'], reference['x'], caseDirectory, reference['fName'])
-Uscaling = 15
+Uscaling = 15  
+# override previously computed Uscaling to a fixed inlet‐velocity scale for case export
         
-my_dpi = 100
-plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
+# ===== Inflow Profile Generation & Export =====
+for x in [-4.95, -2.85]:
+    # Reinitialize GPR for a new inflow plane at x
+    trainPoints = {'h': trainPairs[:,0], 'r': trainPairs[:,1], 'x': [x]}
+    devPoints   = {'h': devPairs[:,0],   'r': devPairs[:,1],   'x': [x]}
+    testPoints  = {'h': testPairs[:,0],  'r': testPairs[:,1],  'x': [x]}
+    # redefine train/dev/test points dictionaries for the current x-location
 
-for x in [-4.95,-2.85]:
-    cont=1
-                
-    trainPoints = {'h':trainPairs[:,0],'r':trainPairs[:,1],'x':[x]}
-    devPoints = {'h':devPairs[:,0],'r':devPairs[:,1],'x':[x]}
-    testPoints = {'h':testPairs[:,0],'r':testPairs[:,1],'x':[x]}
-        
     gp = gaussianProcess(trainPoints, devPoints, testPoints, yMax, PFDatabase, np.linspace(0.01,1.0,100))
+    # reinitialize the GaussianProcess object for each inflow plane
 
-    outputDF = pd.DataFrame()
+    outputDF = pd.DataFrame()  
     fit_features = pd.DataFrame()
+    # reset DataFrames inside the loop to accumulate new predictions per x
 
-    fit_features['y'] = np.linspace(0.01/yMax,1.0,1501)
+    fit_features['y'] = np.linspace(0.01/yMax, 1.0, 1501)
     fit_features['x'] = x
     fit_features['h'] = reference['h']
     fit_features['r'] = reference['r']
@@ -286,13 +307,14 @@ for x in [-4.95,-2.85]:
     outputDF['uw-reynolds-stress'] = np.zeros((len(fit_features['y'].to_numpy()),))
     outputDF['vw-reynolds-stress'] = np.zeros((len(fit_features['y'].to_numpy()),))
 
+    cont = 1
     for QoI in ['u','uu','vv','ww','uv']:
-        
         prefix = str(str(x)+'_').replace('.','p')
-        directory = prefix+inflowModelID
-        model = '../GPRModels/'+directory+'_'+QoI+'.pkl'
-        
-        y_mean = gp.predict(model,fit_features,features,QoI)
+        directory = prefix + inflowModelID
+        model = '../GPRModels/'+directory+'_'+QoI+'.pkl'  
+        # redefine 'model' to load the QoI-specific GPR file each iteration
+
+        y_mean = gp.predict(model, fit_features, features, QoI)
         y_mean['y'] = y_mean['y']/(y_mean['y'].max())
         
         if QoI == 'u':
@@ -348,12 +370,3 @@ plt.suptitle('Chosen setup')
 plt.legend(frameon=False)
 plt.show()
 plt.close('all')
-            
-            
-            
-            
-            
-            
-            
-            
-            
