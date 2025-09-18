@@ -71,13 +71,19 @@ PFDatabase = './GPRDatabase'
 #              ,'h':0.13,'r':91,'alpha':0.61,'k':1.48,'x':4.0,'hMatch':0.666}
 
 ##### MRB CatB ####
-fName = 'MRB_Cat_B'
+# fName = 'MRB_Cat_B'
+# reference = {'fName':fName
+#             ,'h':0.04,'r':92,'alpha':0.42,'k':1.47,'x':3.0,'hMatch':0.666}
+
+##### LRB CatB ####
+fName = 'LRB_Cat_B'
 reference = {'fName':fName
-            ,'h':0.04,'r':92,'alpha':0.42,'k':1.47,'x':3.0,'hMatch':0.666}
+            ,'h':0.07,'r':74,'alpha':0.34,'k':1.62,'x':0.6,'hMatch':0.666}
 
 scale = 1.0/100.0
 #scale = 1.0/21.42857142857111
-HABL = 240.0
+#HABL = 240.0
+HABL = 9
 
 scaling = HABL*scale/reference['alpha']
 caseDirectory = './'+reference['fName']+'_geometric_1to'+str(np.round(1.0/scale).astype(int))
