@@ -92,7 +92,9 @@ reference = {'fName':fName
 scale = 1.0/100.0
 #scale = 1.0/21.42857142857111
 #HABL = 240.0
-HABL = 9
+H_build = 6 #Full Scale Building Height
+HABL = H_build * 1.5
+Uscaling = 15 # target velocity at building height, default 15 m/s (was used in GPR fitting)
 
 scaling = HABL*scale/reference['alpha']
 caseDirectory = './'+reference['fName']+'_geometric_1to'+str(np.round(1.0/scale).astype(int))
@@ -169,10 +171,10 @@ if plotABL:
 
     U_ABL_dim = interp1d(ref_abl['y'], ref_abl['u'])(reference['hMatch']).item()
     U_TIG_dim = interp1d(y_mean['y'],  y_mean['y_model'])(reference['hMatch']).item()
-    Uscaling  = U_ABL_dim / U_TIG_dim * yref / reference['alpha']
+    # Uscaling  = U_ABL_dim / U_TIG_dim * yref / reference['alpha']
 
     # -- Print scaling summary for the plot --
-    print('Scaling velocity from GPR to reference ABL:', np.round(Uscaling,3), 'm/s')
+    # print('Scaling velocity from GPR to reference ABL:', np.round(Uscaling,3), 'm/s')
     print('Reference velocity at', np.round(reference['hMatch']*yref,3),
           'm:', np.round(U_ABL_dim,3), 'm/s')
 
@@ -190,12 +192,10 @@ if plotABL:
         
         # Apply appropriate scaling to the predicted profiles
         if QoI == 'u':
-            #y_mean['y_model'] = y_mean['y_model']*Uscaling
-            #y_mean['y_std'] = y_mean['y_std']*Uscaling
             y_mean['y_model'] = y_mean['y_model']*reference['k']
             y_mean['y_std'] = y_mean['y_std']*reference['k']
             
-        plt.subplot(2,4,cont)
+        plt.subplot(1,4,cont)
         
         if (QoI in header):
             
@@ -228,57 +228,22 @@ if plotABL:
             plt.ylabel('y/H')
         else:
             plt.gca().set_yticklabels([])
-            
-        plt.subplot(2,4,cont+4)
-        
-        y_mean = gp.predict(model,fit_features,features,QoI)
-        y_mean['y'] = y_mean['y']/(y_mean['y'].max())
-        
-        if QoI == 'u':
-            y_mean['y_model'] = y_mean['y_model']*Uscaling
-            y_mean['y_std'] = y_mean['y_std']*Uscaling
-        
-        if (QoI in header):
-            plt.plot(ref_abl[QoI],ref_abl['y']*yref,color='tab:red',label='Target',linewidth=3)
-            plt.fill_betweenx(ref_abl['y']*yref, ref_abl[QoI]*0.9, ref_abl[QoI]*1.1, color='tab:red', alpha=0.2,label=r'Reference $\pm$10%')
-            
-        line = plt.plot(y_mean['y_model'],y_mean['y'],linestyle='--',linewidth=3
-                ,label=r'x='+'{0:.2f}'.format(reference['x'])+'m,h='+'{0:.2f}'.format(reference['h'])+'m'+r'm,$\alpha$='+'{0:.2f}'.format(reference['alpha'])+r',r='+'{0:.2f}'.format(reference['r']))
-        
-        if QoI in header:
-            max_x = np.ceil((1.2*max([np.max(ref_abl[QoI]),np.max(y_mean['y_model'])])*10000).astype(int))/10000
-        else:
-            max_x = np.ceil(1.2*np.max(y_mean['y_model'])*10000).astype(int)/10000
-            
-        if uncertainty == True:
-            plt.fill_betweenx(y_mean['y'], y_mean['y_model']-2*y_mean['y_std'], y_mean['y_model']+2*y_mean['y_std'], color=line[0].get_color(), alpha=0.2)
-        
-        
-        plt.xlim(0,1.1*max_x)
-        plt.xlabel(QoI)
-        
-        if QoI=='u'or QoI == 'Iv':
-            plt.ylabel('y[m]')
-        else:
-            plt.gca().set_yticklabels([])
-        
-        cont +=1
+
+        cont += 1
 
     plt.suptitle('Chosen setup, dimension vs adimensional y')
 
     plt.legend(frameon=False)
     plt.savefig('TestCases/'+reference['fName']+'.png', bbox_inches='tight')
-    plt.show()
-    plt.close('all')
 
 # ===== Generate Geometric Case Files & Inflow Profiles =====
-yMax = 1.5  
+yMax = 1.5 # [m] Height of the GPR downstream fit (not yMax in the paper)
 # redefine yMax to extend the vertical normalization range for inflow generation
 
-Uscaling = 15  
 # override previously computed Uscaling to a fixed inlet‐velocity scale for case export
         
 # ===== Inflow Profile Generation & Export =====
+plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
 for x in [-4.95, -2.85]:
     # Reinitialize GPR for a new inflow plane at x
     trainPoints = {'h': trainPairs[:,0], 'r': trainPairs[:,1], 'x': [x]}
@@ -318,11 +283,11 @@ for x in [-4.95, -2.85]:
         y_mean['y'] = y_mean['y']/(y_mean['y'].max())
         
         if QoI == 'u':
-            y_mean['y_model'] = y_mean['y_model']*Uscaling
-            y_mean['y_std'] = y_mean['y_std']*Uscaling
+            y_mean['y_model'] = y_mean['y_model']*Uscaling * reference['k']
+            y_mean['y_std'] = y_mean['y_std']*Uscaling * reference['k']
         else:
-            y_mean['y_model'] = y_mean['y_model']*Uscaling*Uscaling
-            y_mean['y_std'] = y_mean['y_std']*Uscaling*Uscaling
+            y_mean['y_model'] = y_mean['y_model']*(Uscaling*reference['k'])**2
+            y_mean['y_std'] = y_mean['y_std']*(Uscaling*reference['k'])**2
             
         plt.subplot(2,3,cont)
         
