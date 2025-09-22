@@ -9,6 +9,7 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, Matern, RationalQuadratic, DotProduct, WhiteKernel
 from scipy.interpolate import interp1d
 from modelDefinition import *
+from hyperparametersGPR import features, xList, hTrain, rTrain, devPairs, testPairs, trainPairs
 
 # Define a function that processes each group
 def RMSE_compute(group):
@@ -46,16 +47,6 @@ if __name__ == '__main__':
     nCpu = 128
 
     PFDatabase = './GPRDatabase/'
-
-    # stresses_normalized
-    hTrain = [0.04,0.08,0.12,0.16]
-    rTrain = [52,62,72,82,92]
-
-    devPairs = np.array([[0.06,57],[0.06,87],[0.14,67],[0.14,77]])
-    testPairs = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
-
-    #QoIs = ['u','Iu','Iv','Iw']
-    #testID = 'intensities_high_noA'
     
     QoIs = ['u','uu','vv','ww','uv']
     testID = 'inflow_stresses'
