@@ -85,30 +85,33 @@ PFDatabase = './GPRDatabase'
 # reference = {'fName':fName
 #             ,'h':0.04,'r':92,'alpha':0.42,'k':1.47,'x':3.0,'hMatch':0.666}
 
-reference = json.load(open('caseConfig.json'))
+caseConfig = json.load(open('caseConfig.json'))
+reference = caseConfig['reference']
+scaleFactors = caseConfig['scaleFactors']
+models = caseConfig['models']
+plotABL = caseConfig.get('plotABL', False)
 # ===== Scaling Factor Computation =====
 # Compute geometric scaling factors from HABL and reference α
-scale = 1.0/100.0
+scale = scaleFactors['scale']
 #scale = 1.0/21.42857142857111
 #HABL = 240.0
-H_build = 6 #Full Scale Building Height
+H_build = scaleFactors['H_build']
 HABL = H_build * 1.5
-Uscaling = 15 # target velocity at building height, default 15 m/s (was used in GPR fitting)
+Uscaling = scaleFactors['Uscaling']
+
+# Define model identifiers for intensity and inflow stress fields
+intensitiesModelID = models['intensitiesModelID']
+inflowModelID = models['inflowModelID']
+uncertainty = models['uncertainty']
 
 scaling = HABL*scale/reference['alpha']
 caseDirectory = './'+reference['fName']+'_geometric_1to'+str(np.round(1.0/scale).astype(int))
 # Save the reference dictionary as a JSON file in the case directory
-with open(f"{caseDirectory}/reference.json", 'w') as json_file:
-    json.dump(reference, json_file, indent=4)
+with open(f"{caseDirectory}/caseConfig.json", 'w') as json_file:
+    json.dump(caseConfig, json_file, indent=4)
 
 generateCase(scaling, reference['h'], reference['x'], caseDirectory, reference['fName'])
-# Toggle plotting of ABL profiles
-plotABL = True
 
-# Define model identifiers for intensity and inflow stress fields
-intensitiesModelID = 'intensities'
-inflowModelID = 'inflow_stresses'
-uncertainty = False
 
 # Set maximum non‐dimensional y for normalization in GPR
 yMax= 1.0

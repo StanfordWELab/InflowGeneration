@@ -30,11 +30,11 @@ For running CharLES, you on need to do the inflow optimaization and domain gener
 
 - Python-based framework—compatible with Python 3  
 - Includes scripts for:
-  - General-purpose functions used by most repo scripts (`modelDefinition.py`) 
-  - Generating an ABL from ASCE 49-21 (`ASCEMattia.py`)
-  - Gaussian process regression models hyperparameters tuning (`fitModel.py`,`resultsToDatabase.py`)
-  - Optimizing inflow generator inputs to achieve a target ABL (`optimizeParameters.py`)
-  - Generate CharLES domain for an ABL simulation  (`resultsToDatabase.py`, `paperPlots.py`)
+  - General-purpose functions used by most repo scripts ([`modelDefinition.py`](./modelDefinition.py)) 
+  - Generating an ABL from ASCE 49-21 ([`ASCEMattia.py`](./ASCEMattia.py))
+  - Gaussian process regression models hyperparameters tuning ([`fitModel.py`](./fitModel.py), [`resultsToDatabase.py`](./resultsToDatabase.py))
+  - Optimizing inflow generator inputs to achieve a target ABL ([`optimizeParameters.py`](./optimizeParameters.py))
+  - Generate CharLES domain for an ABL simulation ([`resultsToDatabase.py`](./resultsToDatabase.py), [`paperPlots.py`](./paperPlots.py))
 
 ---
 
@@ -53,9 +53,13 @@ For running CharLES, you on need to do the inflow optimaization and domain gener
 
 
 ## ​ GPR Model
+### Hyperparameters
+Hyperparameters are defined in [`hyperparametersGPR.py`](./hyperparametersGPR.py) and imported into other scripts.
+
+### Scripts
 ![Simulation Domain](./Images/Simulation%20Domains.png)
 
-Scripts `fitModel.py` and `resultsToDatabase.py` can be used to perform the GPR model hyperparameters tuning. You need to run the script at least two times. One to fit the GPR model on the upstream database (inflow generator inputs), and one to fit the downstream database (target ABLs). The syntax to run the scripts is 
+Scripts [`fitModel.py`](./fitModel.py) and [`resultsToDatabase.py`](./resultsToDatabase.py) can be used to perform the GPR model hyperparameters tuning. You need to run the script at least two times. One to fit the GPR model on the upstream database (inflow generator inputs), and one to fit the downstream database (target ABLs). The syntax to run the scripts is 
 
 `python3.9 fitModel.py '[x1,x2,x3]' setToFit`
 
@@ -65,7 +69,7 @@ where x1,x2,x3 are the x locations at which you want to fit the model (read the 
 
 To properly run the script, you first need to define the QoIs for the fit (QoIs = ['u','Iu','Iv','Iw'] for Gridsearch, and QoIs = ['u','uu','vv','ww','uv'] for Inflow), yMax (1.0 for Gridsearch and 1.5 for Inflow) and then the TestID, which is the name of the output folder containing the GPR models fitted during the hyperparameter search. Each model is saved as GPRModels/xxx_TestID_QoI/yyy.pkl, where xxx is the x location at which the hyperparameter tuning is performed, QoI is the specific quantity of interest (e.g. uu or Iw), and yyy is the specific model identifier.
 
-Once the gridsearch terminates, the `resultsToDatabase.py` scripts save the models that yields the best predictions on the dev set. The command to run this script is 
+Once the gridsearch terminates, the [`resultsToDatabase.py`](./resultsToDatabase.py) scripts save the models that yields the best predictions on the dev set. The command to run this script is 
 
 `python3.9 resultsToDatabase.py`
 
@@ -84,7 +88,7 @@ You can find many models I tested on Sherlock in the /oak/stanford/groups/gorle/
 
 ## ​ Inflow optimization
 
-To find the optimal inflow parameter setup required to represent a target ABL, you need to run the `optimizeParameters.py` script with the command
+To find the optimal inflow parameter setup required to represent a target ABL, you need to run the [`optimizeParameters.py`](./optimizeParameters.py) script with the command
 
 `python3.9 optimizeParameters.py mode`
 
@@ -106,9 +110,9 @@ to look at specific solutions (seeds) on the pareto front. This will generate a 
 
 ## ​ Domain Generation
 
-Once the optimization is over, you can use the `generateInflow.py` script. Here, you need to define the fName of the target ABL, the optimal $h$, $r$, $\alpha$, $k$, and $x$ values, the scale of the building with respect to the full scale case, and HABL, which is the maximum height specified in the fName file with the target ABL. As discussed in the Inflow optimization section, this HABL should be 1.5 times the height of the full-scale building. You also need to specify the testID of the models fitted on the upstream and the downstream databases. After running the script with the command. Note that
-- h: height of the roughness elements
-- r: row of roughness elements where inflow boundary condition is sampled
+Once the optimization is over, you can use the [`generateInflow.py`](./generateInflow.py) script. 
+
+[`caseConfig.json`](./caseConfig.json) includes the editable configuration settings, including `reference`, `scaleFactors`, and `models` dictionaries as well as a `plotABL` boolean. `reference` includes `fName` of the target ABL, the optimal $h$, $r$, $\alpha$, $k$, and $x$ values, and `hMatch` which I believe only impacts plotting. `scaleFactors` includes the simulation scale, (full)scale building height, and the velocity scaling factor. `models` includes information on which GOR models to use. If `plotABL` is true, `fName` must match a target ABL profile (./TestCases/{`fName`}.dat). As discussed in the Inflow optimization section, HABL is then calculated as 1.5 times the height of the full-scale building. You also need to specify the testID of the models fitted on the upstream and the downstream databases. 
 
 `python3.9 generateInflow.py`
 
@@ -145,3 +149,4 @@ We consider three buildings with different full-scale heights H: a low-rise buil
 │   ├── 📂 GPRDatabase/           # Data for Gaussian Process Regression
 │   ├── 📂 Predictions/           # Generated model predictions
 │   └── 📂 TestCases/             # Example input test cases
+```
