@@ -13,11 +13,14 @@ from matplotlib import pyplot as plt
 # Import application‐specific GPR and mesh modules
 from modelDefinition import *
 from stl import mesh
+from hyperparametersGPR import features, xList, hTrain, rTrain, devPairs, testPairs, trainPairs
+import json
 
 # Path to the precomputed GPR feature database
 PFDatabase = './GPRDatabase'
 
 # ===== Reference Case Configuration =====
+###### This is for reference, now loaded from caseConfig.json ######
 # Reference case setups (multiple options commented out; select one below)
 #### themisABL setup ####
 #reference = {'fName':'themisABL'
@@ -82,51 +85,33 @@ PFDatabase = './GPRDatabase'
 # reference = {'fName':fName
 #             ,'h':0.04,'r':92,'alpha':0.42,'k':1.47,'x':3.0,'hMatch':0.666}
 
-##### LRB CatB ####
-fName = 'LRB_Cat_B'
-reference = {'fName':fName
-            ,'h':0.07,'r':74,'alpha':0.34,'k':1.62,'x':0.6,'hMatch':0.666}
-
+caseConfig = json.load(open('caseConfig.json'))
+reference = caseConfig['reference']
+scaleFactors = caseConfig['scaleFactors']
+models = caseConfig['models']
+plotABL = caseConfig.get('plotABL', False)
 # ===== Scaling Factor Computation =====
 # Compute geometric scaling factors from HABL and reference α
-scale = 1.0/100.0
+scale = scaleFactors['scale']
 #scale = 1.0/21.42857142857111
 #HABL = 240.0
-HABL = 9
+H_build = scaleFactors['H_build']
+HABL = H_build * 1.5
+Uscaling = scaleFactors['Uscaling']
+
+# Define model identifiers for intensity and inflow stress fields
+intensitiesModelID = models['intensitiesModelID']
+inflowModelID = models['inflowModelID']
+uncertainty = models['uncertainty']
 
 scaling = HABL*scale/reference['alpha']
 caseDirectory = './'+reference['fName']+'_geometric_1to'+str(np.round(1.0/scale).astype(int))
+# Save the reference dictionary as a JSON file in the case directory
+with open(f"{caseDirectory}/caseConfig.json", 'w') as json_file:
+    json.dump(caseConfig, json_file, indent=4)
 
 generateCase(scaling, reference['h'], reference['x'], caseDirectory, reference['fName'])
-# Toggle plotting of ABL profiles
-plotABL = True
 
-# Define model identifiers for intensity and inflow stress fields
-intensitiesModelID = 'intensities'
-inflowModelID = 'inflow_stresses'
-uncertainty = False
-
-# ===== GPR Feature Preparation =====
-# Specify features used as GPR inputs and build feature DataFrame
-features = ['y','h','r']
-
-# Training x‐locations (defined but not directly used below)
-xList = [0.3,0.6,0.9,1.2,1.5,1.8,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]
-
-# Define arrays of training heights (h) and roughness (r)
-hTrain = [0.04,0.08,0.12,0.16]
-rTrain = [52,62,72,82,92]
-
-# Build the full Cartesian product of training parameter pairs
-devPairs = np.array([[0.06,57],[0.06,87],[0.14,67],[0.14,77]])
-testPairs = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
-
-trainPairs = np.zeros((len(hTrain)*len(rTrain),2))
-cont=0
-for hTemp in hTrain:
-    for rTemp in rTrain:
-        trainPairs[cont,:] = [hTemp, rTemp]
-        cont+=1
 
 # Set maximum non‐dimensional y for normalization in GPR
 yMax= 1.0
@@ -169,10 +154,10 @@ if plotABL:
 
     U_ABL_dim = interp1d(ref_abl['y'], ref_abl['u'])(reference['hMatch']).item()
     U_TIG_dim = interp1d(y_mean['y'],  y_mean['y_model'])(reference['hMatch']).item()
-    Uscaling  = U_ABL_dim / U_TIG_dim * yref / reference['alpha']
+    # Uscaling  = U_ABL_dim / U_TIG_dim * yref / reference['alpha']
 
     # -- Print scaling summary for the plot --
-    print('Scaling velocity from GPR to reference ABL:', np.round(Uscaling,3), 'm/s')
+    # print('Scaling velocity from GPR to reference ABL:', np.round(Uscaling,3), 'm/s')
     print('Reference velocity at', np.round(reference['hMatch']*yref,3),
           'm:', np.round(U_ABL_dim,3), 'm/s')
 
@@ -190,12 +175,10 @@ if plotABL:
         
         # Apply appropriate scaling to the predicted profiles
         if QoI == 'u':
-            #y_mean['y_model'] = y_mean['y_model']*Uscaling
-            #y_mean['y_std'] = y_mean['y_std']*Uscaling
             y_mean['y_model'] = y_mean['y_model']*reference['k']
             y_mean['y_std'] = y_mean['y_std']*reference['k']
             
-        plt.subplot(2,4,cont)
+        plt.subplot(1,4,cont)
         
         if (QoI in header):
             
@@ -228,57 +211,20 @@ if plotABL:
             plt.ylabel('y/H')
         else:
             plt.gca().set_yticklabels([])
-            
-        plt.subplot(2,4,cont+4)
-        
-        y_mean = gp.predict(model,fit_features,features,QoI)
-        y_mean['y'] = y_mean['y']/(y_mean['y'].max())
-        
-        if QoI == 'u':
-            y_mean['y_model'] = y_mean['y_model']*Uscaling
-            y_mean['y_std'] = y_mean['y_std']*Uscaling
-        
-        if (QoI in header):
-            plt.plot(ref_abl[QoI],ref_abl['y']*yref,color='tab:red',label='Target',linewidth=3)
-            plt.fill_betweenx(ref_abl['y']*yref, ref_abl[QoI]*0.9, ref_abl[QoI]*1.1, color='tab:red', alpha=0.2,label=r'Reference $\pm$10%')
-            
-        line = plt.plot(y_mean['y_model'],y_mean['y'],linestyle='--',linewidth=3
-                ,label=r'x='+'{0:.2f}'.format(reference['x'])+'m,h='+'{0:.2f}'.format(reference['h'])+'m'+r'm,$\alpha$='+'{0:.2f}'.format(reference['alpha'])+r',r='+'{0:.2f}'.format(reference['r']))
-        
-        if QoI in header:
-            max_x = np.ceil((1.2*max([np.max(ref_abl[QoI]),np.max(y_mean['y_model'])])*10000).astype(int))/10000
-        else:
-            max_x = np.ceil(1.2*np.max(y_mean['y_model'])*10000).astype(int)/10000
-            
-        if uncertainty == True:
-            plt.fill_betweenx(y_mean['y'], y_mean['y_model']-2*y_mean['y_std'], y_mean['y_model']+2*y_mean['y_std'], color=line[0].get_color(), alpha=0.2)
-        
-        
-        plt.xlim(0,1.1*max_x)
-        plt.xlabel(QoI)
-        
-        if QoI=='u'or QoI == 'Iv':
-            plt.ylabel('y[m]')
-        else:
-            plt.gca().set_yticklabels([])
-        
-        cont +=1
+
+        cont += 1
 
     plt.suptitle('Chosen setup, dimension vs adimensional y')
 
     plt.legend(frameon=False)
     plt.savefig('TestCases/'+reference['fName']+'.png', bbox_inches='tight')
-    plt.show()
-    plt.close('all')
 
 # ===== Generate Geometric Case Files & Inflow Profiles =====
-yMax = 1.5  
+yMax = 1.5 # [m] Height of the GPR downstream fit (not yMax in the paper)
 # redefine yMax to extend the vertical normalization range for inflow generation
-
-Uscaling = 15  
-# override previously computed Uscaling to a fixed inlet‐velocity scale for case export
         
 # ===== Inflow Profile Generation & Export =====
+plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
 for x in [-4.95, -2.85]:
     # Reinitialize GPR for a new inflow plane at x
     trainPoints = {'h': trainPairs[:,0], 'r': trainPairs[:,1], 'x': [x]}
@@ -318,11 +264,11 @@ for x in [-4.95, -2.85]:
         y_mean['y'] = y_mean['y']/(y_mean['y'].max())
         
         if QoI == 'u':
-            y_mean['y_model'] = y_mean['y_model']*Uscaling
-            y_mean['y_std'] = y_mean['y_std']*Uscaling
+            y_mean['y_model'] = y_mean['y_model']*Uscaling * reference['k']
+            y_mean['y_std'] = y_mean['y_std']*Uscaling * reference['k']
         else:
-            y_mean['y_model'] = y_mean['y_model']*Uscaling*Uscaling
-            y_mean['y_std'] = y_mean['y_std']*Uscaling*Uscaling
+            y_mean['y_model'] = y_mean['y_model']*(Uscaling*reference['k'])**2
+            y_mean['y_std'] = y_mean['y_std']*(Uscaling*reference['k'])**2
             
         plt.subplot(2,3,cont)
         

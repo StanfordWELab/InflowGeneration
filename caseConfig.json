@@ -1,0 +1,22 @@
+{
+  "reference": {
+    "fName": "LRB_Cat_B",
+    "h": 0.07,
+    "r": 74,
+    "alpha": 0.34,
+    "k": 1.62,
+    "x": 0.6,
+    "hMatch": 0.666
+  },
+  "scaleFactors": {
+    "scale": 0.01,
+    "H_build": 6,
+    "Uscaling": 15
+  },
+  "models": {
+    "intensitiesModelID": "intensities",
+    "inflowModelID": "inflow_stresses",
+    "uncertainty": false
+  },
+  "plotABL": true
+}

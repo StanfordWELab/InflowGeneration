@@ -5,6 +5,8 @@ import numpy as np
 import matplotlib
 from matplotlib import pyplot as plt
 from modelDefinition import *
+from hyperparametersGPR import features, xList, hTrain, rTrain, devPairs, testPairs, trainPairs
+
 
 ###########################################################
 
@@ -50,23 +52,6 @@ adimensional = True
 intensitiesModelID = 'intensities'
 uncertainty = False
 
-features = ['y','h','r']
-
-xList = [0.3,0.6,0.9,1.2,1.5,1.8,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]
-
-hTrain = [0.04,0.08,0.12,0.16]
-rTrain = [52,62,72,82,92]
-
-devPairs = np.array([[0.06,57],[0.06,87],[0.14,67],[0.14,77]])
-testPairs = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
-
-trainPairs = np.zeros((len(hTrain)*len(rTrain),2))
-cont=0
-for hTemp in hTrain:
-    for rTemp in rTrain:
-        trainPairs[cont,:] = [hTemp, rTemp]
-        cont+=1
-        
 fit_features = pd.DataFrame()
 fit_features['y'] = np.linspace(0.01,1.0,2000)
 fit_features['x'] = reference['x']

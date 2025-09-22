@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib
 from matplotlib import pyplot as plt
 from modelDefinition import *
+from hyperparametersGPR import features, xList, hTrain, rTrain, devPairs, testPairs, trainPairs
 
 font={'size'   : 15}
 matplotlib.rc('font', **font)
@@ -110,20 +111,7 @@ if __name__ == '__main__':
     varNames = [r'$h$',r'$r$',r'$\alpha$',r'$k$',r'$x$']
 
     yMax= 1.0
-
-    hTrain = [0.04,0.08,0.12,0.16]
-    rTrain = [52,62,72,82,92]
-
-    trainPairs = np.zeros((len(hTrain)*len(rTrain),2))
-    cont=0
-    for h in hTrain:
-        for r in rTrain:
-            trainPairs[cont,:] = [h, r]
-            cont+=1
-
-    devPairs = np.array([[0.06,57],[0.06,87],[0.14,67],[0.14,77]])
-    testPairs = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
-
+    
     try: 
         mode = sys.argv[1]
     except:

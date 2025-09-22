@@ -14,6 +14,7 @@ from scipy.optimize    import minimize
 from scipy.optimize    import Bounds
 from statsmodels.graphics.tsaplots import acf
 from scipy.interpolate import interp1d
+from hyperparametersGPR import features, hTrain, rTrain, devPairs, testPairs, trainPairs
 
 
 from joblib         import Parallel, delayed
@@ -418,10 +419,6 @@ for fig in figs:
 
         PFDatabase = './GPRDatabase/'
 
-        # stresses_normalized
-        hTrain = [0.04,0.08,0.12,0.16]
-        rTrain = [52,62,72,82,92]
-
         setsToPlot = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
 
         QoIs = ['u','Iu','Iv','Iw']
@@ -429,15 +426,6 @@ for fig in figs:
 
         xList = [0.6,0.9,1.2,1.5,1.8,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]
         #xList = [0.3,0.6,0.9,1.2,1.5]
-
-        trainPairs = np.zeros((len(hTrain)*len(rTrain),2))
-        cont=0
-        for h in hTrain:
-            for r in rTrain:
-                trainPairs[cont,:] = [h, r]
-                cont+=1
-
-        features = ['y','h','r']
 
         my_dpi = 100
         plt.figure(figsize=(2000/my_dpi, 1000/my_dpi), dpi=my_dpi)
@@ -498,25 +486,13 @@ for fig in figs:
 
         PFDatabase = './GPRDatabase/'
 
-        # stresses_normalized
-        hTrain = [0.04,0.08,0.12,0.16]
-        rTrain = [52,62,72,82,92]
-
+        
         setsToPlot = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
 
         QoIs = ['u','Iu','Iv','Iw']
         testID = 'intensities_high'
 
         xList = [0.6,2.1,4.0]
-
-        trainPairs = np.zeros((len(hTrain)*len(rTrain),2))
-        cont=0
-        for h in hTrain:
-            for r in rTrain:
-                trainPairs[cont,:] = [h, r]
-                cont+=1
-
-        features = ['y','h','r']
 
         for x in xList:
 
@@ -579,25 +555,12 @@ for fig in figs:
 
         PFDatabase = './GPRDatabase/'
 
-        # stresses_normalized
-        hTrain = [0.04,0.08,0.12,0.16]
-        rTrain = [52,62,72,82,92]
-
         setsToPlot = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
 
         QoIs = ['u','uu','vv','ww','uv']
         testID = 'inflow_stresses'
 
         xList = [-4.95]
-
-        trainPairs = np.zeros((len(hTrain)*len(rTrain),2))
-        cont=0
-        for h in hTrain:
-            for r in rTrain:
-                trainPairs[cont,:] = [h, r]
-                cont+=1
-
-        features = ['y','h','r']
 
         my_dpi = 100
         plt.figure(figsize=(2000/my_dpi, 700/my_dpi), dpi=my_dpi)
@@ -873,19 +836,6 @@ for fig in figs:
 
         yMax= 1.5
 
-        hTrain = [0.04,0.08,0.12,0.16]
-        rTrain = [52,62,72,82,92]
-
-        trainPairs = np.zeros((len(hTrain)*len(rTrain),2))
-        cont=0
-        for h in hTrain:
-            for r in rTrain:
-                trainPairs[cont,:] = [h, r]
-                cont+=1
-
-        devPairs = np.array([[0.06,57],[0.06,87],[0.14,67],[0.14,77]])
-        testPairs = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
-        
         my_dpi = 100
         #plt.figure(figsize=(2000/my_dpi, 1650/my_dpi), dpi=my_dpi)
         plt.figure(figsize=(1650/my_dpi, 2000/my_dpi), dpi=my_dpi)

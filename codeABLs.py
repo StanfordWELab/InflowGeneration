@@ -13,6 +13,7 @@ from joblib         import Parallel, delayed
 from modelDefinition import *
 from statsmodels.graphics.tsaplots import acf
 from scipy.interpolate import interp1d
+from hyperparametersGPR import features, xList, hTrain, rTrain, devPairs, testPairs, trainPairs
 
 def expCurve(t, tau):
     return np.exp(-t/tau)
@@ -66,16 +67,6 @@ intensitiesModelID = 'intensities'
 uncertainty = False
 
 nPlots = len(cases)
-
-features = ['y','h','r']
-
-xList = [0.3,0.6,0.9,1.2,1.5,1.8,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]
-
-hTrain = [0.04,0.08,0.12,0.16]
-rTrain = [52,62,72,82,92]
-
-devPairs = np.array([[0.06,57],[0.06,87],[0.14,67],[0.14,77]])
-testPairs = np.array([[0.06,67],[0.06,77],[0.14,57],[0.14,87]])
 
 trainPairs = np.zeros((len(hTrain)*len(rTrain),2))
 cont=0
