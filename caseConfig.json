@@ -13,10 +13,5 @@
     "H_build": 6,
     "Uscaling": 15
   },
-  "models": {
-    "intensitiesModelID": "intensities",
-    "inflowModelID": "inflow_stresses",
-    "uncertainty": false
-  },
   "plotABL": true
 }

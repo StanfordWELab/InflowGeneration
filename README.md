@@ -54,7 +54,7 @@ For running CharLES, you on need to do the inflow optimaization and domain gener
 
 ## ​ GPR Model
 ### Hyperparameters
-Hyperparameters are defined in [`hyperparametersGPR.py`](./hyperparametersGPR.py) and imported into other scripts.
+Hyperparameters (and some other similarly used variables like model IDs) are defined in [`hyperparametersGPR.py`](./hyperparametersGPR.py) and imported into other scripts.
 
 ### Scripts
 ![Simulation Domain](./Images/Simulation%20Domains.png)
@@ -112,7 +112,7 @@ to look at specific solutions (seeds) on the pareto front. This will generate a 
 
 Once the optimization is over, you can use the [`generateInflow.py`](./generateInflow.py) script. 
 
-[`caseConfig.json`](./caseConfig.json) includes the editable configuration settings, including `reference`, `scaleFactors`, and `models` dictionaries as well as a `plotABL` boolean. `reference` includes `fName` of the target ABL, the optimal $h$, $r$, $\alpha$, $k$, and $x$ values, and `hMatch` which I believe only impacts plotting. `scaleFactors` includes the simulation scale, (full)scale building height, and the velocity scaling factor. `models` includes information on which GOR models to use. If `plotABL` is true, `fName` must match a target ABL profile (./TestCases/{`fName`}.dat). As discussed in the Inflow optimization section, HABL is then calculated as 1.5 times the height of the full-scale building. You also need to specify the testID of the models fitted on the upstream and the downstream databases. 
+[`caseConfig.json`](./caseConfig.json) includes the editable configuration settings, including `reference` and `scaleFactors` dictionaries as well as a `plotABL` boolean. `reference` includes `fName` of the target ABL, the optimal $h$, $r$, $\alpha$, $k$, and $x$ values, and `hMatch` which I believe only impacts plotting. `scaleFactors` includes the simulation scale, (full)scale building height, and the velocity scaling factor. If `plotABL` is true, `fName` must match a target ABL profile (./TestCases/{`fName`}.dat). As discussed in the Inflow optimization section, HABL is then calculated as 1.5 times the height of the full-scale building. You also need to specify the testID of the models fitted on the upstream and the downstream databases. 
 
 `python3.9 generateInflow.py`
 

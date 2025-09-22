@@ -9,7 +9,7 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, Matern, RationalQuadratic, DotProduct, WhiteKernel
 from scipy.interpolate import interp1d
 from modelDefinition import *
-from hyperparametersGPR import features, xList, hTrain, rTrain, devPairs, testPairs, trainPairs
+from hyperparametersGPR import features, xList, hTrain, rTrain, devPairs, testPairs, trainPairs, intensitiesModelID, inflowModelID, uncertainty
 
 # Define a function that processes each group
 def RMSE_compute(group):
@@ -49,7 +49,7 @@ if __name__ == '__main__':
     PFDatabase = './GPRDatabase/'
     
     QoIs = ['u','uu','vv','ww','uv']
-    testID = 'inflow_stresses'
+    testID = inflowModelID
 
     setToPlot = 'Test'
 

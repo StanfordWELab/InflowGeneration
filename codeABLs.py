@@ -13,7 +13,7 @@ from joblib         import Parallel, delayed
 from modelDefinition import *
 from statsmodels.graphics.tsaplots import acf
 from scipy.interpolate import interp1d
-from hyperparametersGPR import features, xList, hTrain, rTrain, devPairs, testPairs, trainPairs
+from hyperparametersGPR import features, xList, hTrain, rTrain, devPairs, testPairs, trainPairs, intensitiesModelID, inflowModelID, uncertainty
 
 def expCurve(t, tau):
     return np.exp(-t/tau)
@@ -62,9 +62,6 @@ cases = {'LRB_Cat1_scale1to50':{'directory':{'../../CatherineABLs/LRB_Cat1_scale
 ###########################################################
 
 plt.close('all')
-
-intensitiesModelID = 'intensities'
-uncertainty = False
 
 nPlots = len(cases)
 

@@ -13,7 +13,7 @@ from matplotlib import pyplot as plt
 # Import application‐specific GPR and mesh modules
 from modelDefinition import *
 from stl import mesh
-from hyperparametersGPR import features, xList, hTrain, rTrain, devPairs, testPairs, trainPairs
+from hyperparametersGPR import features, xList, hTrain, rTrain, devPairs, testPairs, trainPairs, uncertainty, intensitiesModelID, inflowModelID
 import json
 
 # Path to the precomputed GPR feature database
@@ -88,7 +88,6 @@ PFDatabase = './GPRDatabase'
 caseConfig = json.load(open('caseConfig.json'))
 reference = caseConfig['reference']
 scaleFactors = caseConfig['scaleFactors']
-models = caseConfig['models']
 plotABL = caseConfig.get('plotABL', False)
 # ===== Scaling Factor Computation =====
 # Compute geometric scaling factors from HABL and reference α
@@ -98,11 +97,6 @@ scale = scaleFactors['scale']
 H_build = scaleFactors['H_build']
 HABL = H_build * 1.5
 Uscaling = scaleFactors['Uscaling']
-
-# Define model identifiers for intensity and inflow stress fields
-intensitiesModelID = models['intensitiesModelID']
-inflowModelID = models['inflowModelID']
-uncertainty = models['uncertainty']
 
 scaling = HABL*scale/reference['alpha']
 caseDirectory = './'+reference['fName']+'_geometric_1to'+str(np.round(1.0/scale).astype(int))

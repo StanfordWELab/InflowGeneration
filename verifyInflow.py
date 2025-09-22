@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib
 from matplotlib import pyplot as plt
 from modelDefinition import *
-from hyperparametersGPR import features, xList, hTrain, rTrain, devPairs, testPairs, trainPairs
+from hyperparametersGPR import features, xList, hTrain, rTrain, devPairs, testPairs, trainPairs, intensitiesModelID, inflowModelID, uncertainty
 
 
 ###########################################################
@@ -48,9 +48,6 @@ yMax = 0.42*1.5
 adimensional = True
 
 ###########################################################
-
-intensitiesModelID = 'intensities'
-uncertainty = False
 
 fit_features = pd.DataFrame()
 fit_features['y'] = np.linspace(0.01,1.0,2000)

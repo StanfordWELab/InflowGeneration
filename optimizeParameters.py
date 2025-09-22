@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib
 from matplotlib import pyplot as plt
 from modelDefinition import *
-from hyperparametersGPR import features, xList, hTrain, rTrain, devPairs, testPairs, trainPairs
+from hyperparametersGPR import features, xList, hTrain, rTrain, devPairs, testPairs, trainPairs, intensitiesModelID, inflowModelID, uncertainty
 
 font={'size'   : 15}
 matplotlib.rc('font', **font)
@@ -97,8 +97,7 @@ if __name__ == '__main__':
 
     #### metric is 'RMSE' or 'RMSE relative'
     metric = 'RMSE'
-    uncertainty = False
-    testID = 'intensities'
+    testID = intensitiesModelID
     nCpu = 12
 
     targetQoIs = ['u','Iu','Iv','Iw']
