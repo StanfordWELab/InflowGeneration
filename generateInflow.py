@@ -89,6 +89,7 @@ caseConfig = json.load(open('caseConfig.json'))
 reference = caseConfig['reference']
 scaleFactors = caseConfig['scaleFactors']
 plotABL = caseConfig.get('plotABL', False)
+wDomain = caseConfig.get('wDomain', 3.0)
 # ===== Scaling Factor Computation =====
 # Compute geometric scaling factors from HABL and reference α
 scale = scaleFactors['scale']
@@ -101,11 +102,10 @@ Uscaling = scaleFactors['Uscaling']
 scaling = HABL*scale/reference['alpha']
 caseDirectory = './'+reference['fName']+'_geometric_1to'+str(np.round(1.0/scale).astype(int))
 # Save the reference dictionary as a JSON file in the case directory
+
+generateCase(scaling, reference['h'], reference['x'], caseDirectory, reference['fName'], wDomain=wDomain)
 with open(f"{caseDirectory}/caseConfig.json", 'w') as json_file:
     json.dump(caseConfig, json_file, indent=4)
-
-generateCase(scaling, reference['h'], reference['x'], caseDirectory, reference['fName'])
-
 
 # Set maximum non‐dimensional y for normalization in GPR
 yMax= 1.0

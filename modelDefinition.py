@@ -591,17 +591,17 @@ class generateCase:
     lFetch  = 2.7
     spacing = 0.3
     hDomain = 3.0
-    wDomain = 3.0
     
     NSmooth = 100
     
     upstreamLength = lBox + 0.5*spacing+lFetch
     
-    def __init__(self, scaling, hRough, xABL, directory, fName):
+    def __init__(self, scaling, hRough, xABL, directory, fName, wDomain=3.0):
         
         self.scaling   = scaling
         self.hRough    = hRough
         self.directory = directory
+        self.wDomain   = wDomain
         self.xABL = xABL
         
         try:
@@ -800,7 +800,7 @@ class generateCase:
             out.write('FLIP ZONE_NAMES ground,outlet,left,leftTop\n\n')
             out.write('MOVE_TO_ZONE NAME left ZONE_NAMES leftTop\n')
             out.write('MOVE_TO_ZONE NAME right ZONE_NAMES rightTop\n\n')
-            out.write('SET_PERIODIC ZONES left right CART 0 0 '+str(3.0*self.scaling)+'\n\n')
+            out.write('SET_PERIODIC ZONES left right CART 0 0 '+str(self.wDomain*self.scaling)+'\n\n')
             out.write('WRITE_SBIN emptyDomain.sbin')
             
         return

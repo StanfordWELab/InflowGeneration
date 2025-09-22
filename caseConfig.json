@@ -13,5 +13,6 @@
     "H_build": 6,
     "Uscaling": 15
   },
+  "wDomain": 6.0,
   "plotABL": true
 }
