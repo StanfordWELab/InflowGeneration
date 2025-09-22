@@ -14,11 +14,13 @@ from matplotlib import pyplot as plt
 from modelDefinition import *
 from stl import mesh
 from hyperparametersGPR import features, xList, hTrain, rTrain, devPairs, testPairs, trainPairs
+import json
 
 # Path to the precomputed GPR feature database
 PFDatabase = './GPRDatabase'
 
 # ===== Reference Case Configuration =====
+###### This is for reference, now loaded from caseConfig.json ######
 # Reference case setups (multiple options commented out; select one below)
 #### themisABL setup ####
 #reference = {'fName':'themisABL'
@@ -83,11 +85,7 @@ PFDatabase = './GPRDatabase'
 # reference = {'fName':fName
 #             ,'h':0.04,'r':92,'alpha':0.42,'k':1.47,'x':3.0,'hMatch':0.666}
 
-##### LRB CatB ####
-fName = 'LRB_Cat_B'
-reference = {'fName':fName
-            ,'h':0.07,'r':74,'alpha':0.34,'k':1.62,'x':0.6,'hMatch':0.666}
-
+reference = json.load(open('caseConfig.json'))
 # ===== Scaling Factor Computation =====
 # Compute geometric scaling factors from HABL and reference α
 scale = 1.0/100.0
@@ -99,6 +97,9 @@ Uscaling = 15 # target velocity at building height, default 15 m/s (was used in 
 
 scaling = HABL*scale/reference['alpha']
 caseDirectory = './'+reference['fName']+'_geometric_1to'+str(np.round(1.0/scale).astype(int))
+# Save the reference dictionary as a JSON file in the case directory
+with open(f"{caseDirectory}/reference.json", 'w') as json_file:
+    json.dump(reference, json_file, indent=4)
 
 generateCase(scaling, reference['h'], reference['x'], caseDirectory, reference['fName'])
 # Toggle plotting of ABL profiles
@@ -218,8 +219,6 @@ if plotABL:
 # ===== Generate Geometric Case Files & Inflow Profiles =====
 yMax = 1.5 # [m] Height of the GPR downstream fit (not yMax in the paper)
 # redefine yMax to extend the vertical normalization range for inflow generation
-
-# override previously computed Uscaling to a fixed inlet‐velocity scale for case export
         
 # ===== Inflow Profile Generation & Export =====
 plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
