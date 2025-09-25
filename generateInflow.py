@@ -164,13 +164,16 @@ if plotABL:
         model = '../GPRModels/'+directory+'_'+QoI+'.pkl'
         
         y_mean = gp.predict(model,fit_features,features,QoI)
-        y_mean = y_mean.loc[y_mean['y']<=reference['alpha']*np.max(y_mean['y'])]
+        H_norm = reference['alpha']*np.max(y_mean['y'])
+        print(f"For ABL plot, y normalized by H = {H_norm:.3f} m, or {scaling*H_norm:.3f} m in simulation space")
+        y_mean = y_mean.loc[y_mean['y']<=H_norm]
         y_mean['y'] = y_mean['y']/(y_mean['y'].max())
         
         # Apply appropriate scaling to the predicted profiles
         if QoI == 'u':
             y_mean['y_model'] = y_mean['y_model']*reference['k']
             y_mean['y_std'] = y_mean['y_std']*reference['k']
+            print(f"For ABL plot, U normalized by {reference['k']:.3f} m/s, or {Uscaling*reference['k']:.3f} m/s in simulation space")
             
         plt.subplot(1,4,cont)
         

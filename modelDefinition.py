@@ -801,6 +801,7 @@ class generateCase:
             out.write('MOVE_TO_ZONE NAME left ZONE_NAMES leftTop\n')
             out.write('MOVE_TO_ZONE NAME right ZONE_NAMES rightTop\n\n')
             out.write('SET_PERIODIC ZONES left right CART 0 0 '+str(self.wDomain*self.scaling)+'\n\n')
+            out.write('BBOX\n')
             out.write('WRITE_SBIN emptyDomain.sbin')
             
         return

@@ -9,9 +9,9 @@
     "hMatch": 0.666
   },
   "scaleFactors": {
-    "scale": 0.01,
+    "scale": 7.555556,
     "H_build": 6,
-    "Uscaling": 15
+    "Uscaling": 1
   },
   "wDomain": 6.0,
   "plotABL": true
