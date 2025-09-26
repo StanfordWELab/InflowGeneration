@@ -41,11 +41,10 @@ For running CharLES, you on need to do the inflow optimaization and domain gener
 ## Symbols
 - $H$ of $H_{Build}$: height of building
 - $y$: non-dimensionalized vertical coordinate system.
-  - $y^T$: top of the domain in the paper
-  - $y^{Max}$ or $\alpha$: new domain height suggested by the GPR model (called $y^{Max}$ in the paper and `alpha` in the code)
-    - Note that `yMax` in the code is instead the (model scale) domain height **not** the opeimized height
-  - `scale`: in the code, `scale` is $y^{Max} / y^T$
-    - Note that the building height in the optimized downstream simulation would be $H y^{Max} / y^T$ or equivalently `H * scale`
+  - $y^T$: Maximum height of the target ABL in the paper. This is not the domain height (which is larger).
+  - $y^{Max}$ or $\alpha$: new maximum ABL height suggested by GPR model (called $y^{Max}$ in the paper and `alpha` in the code)
+    - Note that `yMax` in the code is instead refering to $y^T$ **not** the optimized height
+  - `scale`: in the code, `scale` an arbitrary rescaling value.
 - $h$: height of rougness elements
 - $r$: number or roughness elements in upstream simulation
 - $k$: velocity scaling factor, enabling the profile to be scaled to the target profile. This assumes high reynolds limit.
@@ -63,7 +62,7 @@ Scripts [`fitModel.py`](./fitModel.py) and [`resultsToDatabase.py`](./resultsToD
 
 `python3.9 fitModel.py '[x1,x2,x3]' setToFit`
 
-where x1,x2,x3 are the x locations at which you want to fit the model (read the paper for more info), while setToFit can be Gridsearch, Inflow, or Plot. Gridsearch fits the downstream database for y in [0;1m], while Inflow fits the upstream database for y in [0;1.5m]. I'll focus on the Plot option later.
+where x1,x2,x3 are the x locations at which you want to fit the model (read the paper for more info), while setToFit can be Gridsearch, Inflow, or Plot. Gridsearch fits the downstream database for y in [0;1m], while Inflow fits the upstream database for y in [0;1.5m]. These are in reference to the model domain scale with domain height of 3m. I'll focus on the Plot option later.
 
 ![Framework](./Images/Framework.png)
 
