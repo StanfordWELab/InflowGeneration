@@ -130,7 +130,8 @@ trainPoints = {'h':trainPairs[:,0],'r':trainPairs[:,1],'x':[reference['x']]}
 gp = gaussianProcess(trainPoints, devPoints, testPoints, yMax, PFDatabase)
 
 # ===== Plot ABL Profiles (if enabled) =====
-if plotABL:
+my_dpi = 100
+def plotABL(reference, save=False):
     # -- Load & normalize reference ABL data (plot only) --
     prefix   = str(reference['x']).replace('.', 'p') + '_'
     directory = prefix + intensitiesModelID
@@ -156,7 +157,6 @@ if plotABL:
           'm:', np.round(U_ABL_dim,3), 'm/s')
 
     # -- Configure figure and plot profiles --
-    my_dpi = 100
     plt.figure(figsize=(2260/my_dpi, 1300/my_dpi), dpi=my_dpi)
     cont = 1
     for QoI in ['u','Iu','Iv','Iw']:
@@ -173,7 +173,7 @@ if plotABL:
         if QoI == 'u':
             y_mean['y_model'] = y_mean['y_model']*reference['k']
             y_mean['y_std'] = y_mean['y_std']*reference['k']
-            print(f"For ABL plot, U normalized by {reference['k']:.3f} m/s, or {Uscaling*reference['k']:.3f} m/s in simulation space")
+            print(f"For ABL plot, U scaled by {reference['k']:.3f} m/s, or {Uscaling*reference['k']:.3f} m/s in simulation space")
             
         plt.subplot(1,4,cont)
         
@@ -214,7 +214,12 @@ if plotABL:
     plt.suptitle('Chosen setup, dimension vs adimensional y')
 
     plt.legend(frameon=False)
-    plt.savefig('TestCases/'+reference['fName']+'.png', bbox_inches='tight')
+    if save:    
+        plt.savefig('TestCases/'+reference['fName']+'.png', bbox_inches='tight')
+    return
+
+if plotABL:
+    plotABL(reference, save=True)
 
 # ===== Generate Geometric Case Files & Inflow Profiles =====
 yMax = 1.5 # [m] Height of the GPR downstream fit (not yMax in the paper)
