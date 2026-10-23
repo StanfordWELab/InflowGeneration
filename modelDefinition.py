@@ -515,6 +515,7 @@ class MyProblem(Problem):
             for QoI in QoIs:
         
                 model = '../GPRModels/'+prefix+self.testPrefix+'_'+QoI+'.pkl'
+#                model = './NIST_case/'+prefix+self.testPrefix+'_'+QoI+'.pkl'
                 gp_model.loadModel(model)
                 
                 self.modelDict[prefix][QoI] = cp.deepcopy(gp_model)

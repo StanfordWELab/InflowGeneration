@@ -65,17 +65,17 @@ if __name__ == '__main__':
     #fNames = ['testABL']
     #fNames = ['TPU_ABL']
     #fNames = ['themisABL','inflowProfile_U10_Cat1_1uu1vv1ww','inflowProfile_U10_Cat2_1uu1vv1ww','inflowProfile_U10_Cat3_1uu1vv1ww','inflowProfile_U10_Cat4_1uu1vv1ww']
-    fNames = ['MRB_Cat_B']
+    fNames = ['target_profile']
     #fNames = ['inflowProfile_U10_Cat1_1uu1vv1ww','inflowProfile_U10_Cat2_1uu1vv1ww','inflowProfile_U10_Cat3_1uu1vv1ww','inflowProfile_U10_Cat4_1uu1vv1ww']
     #fNames = ['inflowProfile_Cat2_1uu1vv1ww','inflowProfile_Cat3_1uu1vv1ww']y
     #fNames = ['TPU_highrise_14_middle']
 
     ##### Define these variables for Optimize-Gridsearch ####
-    #hList = [0.04,0.06,0.08,0.10,0.12,0.14,0.16]
-    #xList = [[0.3,0.6,0.9,1.2,1.5,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]]
-    #alphaList = [0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-    #rList = [52,57,62,67,72,77,82,87,92]
-    #fNames = ['themisABL_alpha']
+    hList = [0.04,0.06,0.08,0.10,0.12,0.14,0.16]
+    xList = [[0.3,0.6,0.9,1.2,1.5,2.1,2.4,2.7,3.0,3.3,3.6,4.0,5.0,6.0,7.0,9.0,11.0,13.0]]
+    alphaList = [0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
+    rList = [52,57,62,67,72,77,82,87,92]
+    fNames = ['themisABL_alpha']
 
 
     #### Define these variables for Optimize-NSGA ####
@@ -100,12 +100,15 @@ if __name__ == '__main__':
     testID = intensitiesModelID
     nCpu = 12
 
-    targetQoIs = ['u','Iu','Iv','Iw']
+#    targetQoIs = ['u','Iu','Iv','Iw']
+    targetQoIs = ['u','Iu']
 
     ###############################################################################################
 
+#    options = ['Optimize-Gridsearch','Optimize-NSGA','Plot-Gridsearch','Plot-NSGA','Plot-Setup']
     options = ['Optimize-Gridsearch','Optimize-NSGA','Plot-Gridsearch','Plot-NSGA','Plot-Setup']
-    everyQoI = ['u','Iu','Iv','Iw']
+#    everyQoI = ['u','Iu','Iv','Iw']
+    everyQoI = ['u','Iu']
     features = ['y','h','r']
     varNames = [r'$h$',r'$r$',r'$\alpha$',r'$k$',r'$x$']
 
@@ -128,7 +131,8 @@ if __name__ == '__main__':
 
     for fName in fNames:
         
-        ref_abl = pd.read_csv('TestCases/'+fName+'.dat',sep=',')
+#        ref_abl = pd.read_csv('TestCases/'+fName+'.dat',sep=',')
+        ref_abl = pd.read_csv('NIST_case/'+fName+'.dat',sep=',')
         header = list(ref_abl.columns)
         idx = np.argmax(ref_abl['y'].to_numpy())
 

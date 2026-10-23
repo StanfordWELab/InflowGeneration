@@ -1,0 +1,47 @@
+import matplotlib.pyplot as plt
+import numpy as np 
+
+u_star = 2.7372
+z0 = 0.3
+fc = 0.0001
+H = 180
+U_H = 45.3
+alpha1 = 5.75
+k = 0.4
+zg = u_star/(6*fc)
+
+u_mean = lambda z: u_star/k * (np.log(z/z0) + alpha1*(z/zg) + (1-alpha1/2)*(z/zg)**2 - 4/3*(z/zg)**3 + 1/4*(z/zg)**4)
+I_u_mean = lambda z: 2.63*u_star*(1-z/zg) * (0.538+0.09*np.log(z/z0))**((1-z/zg)**16) 
+u_mean_simple = lambda z: u_star/k * np.log(z/z0)
+I_u_mean_simple = lambda z: 2.63*u_star*(1-z/zg) * (0.538+0.09*np.log(z/z0))**((1-z/zg)**16) 
+
+z = np.linspace(0.01, 300, 300000)
+fig, (ax1, ax2) = plt.subplots(1,2, figsize=(12,8))
+ax1.plot(u_mean(z), z, 'blue', label='u_mean_complete')
+ax1.plot(u_mean_simple(z), z, 'blue', linestyle='--', label='u_mean_1st_term')
+ax1.grid(True)
+ax1.set_xlabel('Wind mean speed(m/s)')
+ax1.set_ylabel('Z height(m)')
+ax1.set_xlim(0, 50)
+ax2.plot(I_u_mean(z) / u_mean(z), z, 'blue', label='I_u_mean_complete')
+ax2.plot(I_u_mean_simple(z) / u_mean_simple(z), z, 'blue', linestyle='--', label='I_u_mean_1st_term')
+ax2.grid(True)
+ax2.set_xlabel('Turbulence intensity')
+ax2.set_ylabel('Z height(m)')
+ax2.set_xlim(0.1, 0.4)
+ax2.legend()
+#plt.show()
+
+y = np.round(np.linspace(5, 300, 60),2)
+u = np.round(u_mean(y),2)
+Iu = np.round(I_u_mean(y),2)
+data = np.column_stack([y, u, Iu])
+
+np.savetxt(
+    "./NIST_case/target_profile.dat",
+    data,
+    header="y,u,Iu",       # title line
+    comments="",           # no '#' in front of the header
+    fmt="%.2f",            # scientific notation, 6 decimals
+    delimiter=",",         # use "\t" for tab-separated
+)
